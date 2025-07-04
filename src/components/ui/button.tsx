@@ -21,6 +21,7 @@ export function Button({
   onClick,
   disabled,
   type = "button",
+  asChild = false,
   ...props 
 }: ButtonProps) {
   const baseClasses = "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
@@ -40,17 +41,27 @@ export function Button({
     lg: "h-11 rounded-md px-8",
     icon: "h-10 w-10",
   }
+
+  const combinedClassName = cn(
+    baseClasses,
+    variantClasses[variant],
+    sizeClasses[size],
+    className
+  )
+
+  if (asChild) {
+    // When asChild is true, clone the child element and apply our classes
+    return React.cloneElement(children as React.ReactElement, {
+      className: cn(combinedClassName, (children as React.ReactElement)?.props?.className),
+      ...props
+    })
+  }
   
   return (
     // @ts-ignore
     <button
       type={type}
-      className={cn(
-        baseClasses,
-        variantClasses[variant],
-        sizeClasses[size],
-        className
-      )}
+      className={combinedClassName}
       onClick={onClick}
       disabled={disabled}
       {...props}

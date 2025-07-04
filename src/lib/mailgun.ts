@@ -1,10 +1,7 @@
 // @ts-ignore
+import Mailgun from 'mailgun.js';
+import formData from 'form-data';
 import { createHmac } from 'crypto';
-
-// Declare Buffer for Node.js environment
-declare var Buffer: {
-  from(data: string): { toString(encoding: string): string };
-};
 import { getMailgunConfig } from '@/utils/env';
 import { 
   MailgunWebhookPayload, 
@@ -12,6 +9,26 @@ import {
   EmailTemplate, 
   TimeoutErrorType 
 } from '@/types';
+
+// Initialize Mailgun client following official documentation
+let mailgunClient: any = null;
+
+function getMailgunClient() {
+  if (!mailgunClient) {
+    const config = getMailgunConfig();
+    
+    // Official pattern: new Mailgun(formData) then client()
+    const mailgun = new Mailgun(formData);
+    mailgunClient = mailgun.client({
+      username: 'api',
+      key: config.apiKey,
+      url: 'https://api.mailgun.net' // Use US servers (default)
+    });
+    
+    console.log('📧 [MAILGUN] Client initialized with domain:', config.domain);
+  }
+  return mailgunClient;
+}
 
 // Email templates for different scenarios
 const EMAIL_TEMPLATES = {
@@ -166,7 +183,8 @@ const EMAIL_TEMPLATES = {
 };
 
 /**
- * Verify Mailgun webhook signature for security
+ * Verify Mailgun webhook signature using manual verification
+ * Based on official Mailgun webhook security documentation
  * @param timestamp - Request timestamp
  * @param token - Request token
  * @param signature - Request signature
@@ -179,24 +197,56 @@ export function verifyMailgunSignature(
 ): boolean {
   try {
     const config = getMailgunConfig();
+    
+    console.log('🔐 [MAILGUN] Signature verification details:', {
+      timestamp: timestamp,
+      timestampDate: new Date(parseInt(timestamp) * 1000),
+      token: token?.substring(0, 10) + '...',
+      signature: signature?.substring(0, 10) + '...',
+      webhookKey: config.webhookKey ? 'Present' : 'Missing'
+    });
+
+    // Manual verification using the webhook signing key
+    // This is the official Mailgun pattern for webhook verification
     const data = timestamp + token;
-    const hash = createHmac('sha256', config.apiKey)
+    const hash = createHmac('sha256', config.webhookKey)
       .update(data)
       .digest('hex');
     
-    return hash === signature;
+    const isValid = hash === signature;
+    
+    console.log('🔐 [MAILGUN] Manual verification result:', {
+      calculatedHash: hash.substring(0, 10) + '...',
+      receivedSignature: signature?.substring(0, 10) + '...',
+      dataToSign: `${timestamp}${token?.substring(0, 5)}...`,
+      usingWebhookKey: true,
+      isValid
+    });
+    
+    return isValid;
   } catch (error) {
-    console.error('Mailgun signature verification failed:', error);
+    console.error('🔐 [MAILGUN] Signature verification failed:', error);
     return false;
   }
 }
 
 /**
- * Parse Mailgun webhook payload
+ * Parse Mailgun webhook payload with enhanced logging
  * @param formData - Form data from webhook
  * @returns MailgunWebhookPayload - Parsed payload
  */
 export function parseMailgunWebhook(formData: FormData): MailgunWebhookPayload {
+  console.log('📋 [MAILGUN] Raw form data keys:', Array.from(formData.keys()));
+  console.log('📋 [MAILGUN] Form data entries:', {
+    sender: formData.get('sender'),
+    recipient: formData.get('recipient'),
+    subject: formData.get('subject'),
+    timestamp: formData.get('timestamp'),
+    signature: formData.get('signature')?.toString().substring(0, 10) + '...',
+    token: formData.get('token')?.toString().substring(0, 10) + '...',
+    attachmentCount: formData.get('attachment-count')
+  });
+
   return {
     recipient: formData.get('recipient') as string,
     sender: formData.get('sender') as string,
@@ -212,22 +262,33 @@ export function parseMailgunWebhook(formData: FormData): MailgunWebhookPayload {
 }
 
 /**
- * Extract user slug from recipient email
+ * Extract user slug from recipient email with enhanced logging
  * @param recipient - Email recipient (e.g., "abc123@yourdomain.com")
  * @returns string - User slug or empty string
  */
 export function extractUserSlug(recipient: string): string {
   try {
+    console.log('🔍 [MAILGUN] Extracting slug from recipient:', recipient);
     const match = recipient.match(/^([a-zA-Z0-9]{6})@/);
-    return match ? match[1] : '';
+    const slug = match ? match[1] : '';
+    
+    console.log('🔍 [MAILGUN] Slug extraction result:', {
+      recipient,
+      extractedSlug: slug,
+      slugLength: slug?.length,
+      isValidSlug: slug && slug.length === 6,
+      regexMatch: !!match
+    });
+    
+    return slug;
   } catch (error) {
-    console.error('Failed to extract user slug:', error);
+    console.error('🔍 [MAILGUN] Failed to extract user slug:', error);
     return '';
   }
 }
 
 /**
- * Get audio attachments from Mailgun webhook
+ * Get audio attachments from Mailgun webhook with enhanced logging
  * @param formData - Form data from webhook
  * @returns MailgunAttachment[] - Array of audio attachments
  */
@@ -235,14 +296,32 @@ export function getAudioAttachments(formData: FormData): MailgunAttachment[] {
   const attachments: MailgunAttachment[] = [];
   const attachmentCount = parseInt(formData.get('attachment-count') as string || '0');
   
+  console.log('🎵 [MAILGUN] Processing attachments:', {
+    totalAttachments: attachmentCount,
+    formDataKeys: Array.from(formData.keys()).filter(key => key.startsWith('attachment-'))
+  });
+  
   for (let i = 1; i <= attachmentCount; i++) {
     const filename = formData.get(`attachment-${i}`) as string;
     const contentType = formData.get(`attachment-${i}-content-type`) as string;
+    
+    console.log(`🎵 [MAILGUN] Attachment ${i}:`, {
+      filename,
+      contentType,
+      isAudio: filename && contentType ? isAudioFile(filename, contentType) : false
+    });
     
     if (filename && contentType && isAudioFile(filename, contentType)) {
       // In Mailgun, attachments are accessible via signed URLs
       const url = formData.get(`attachment-${i}-url`) as string;
       const size = parseInt(formData.get(`attachment-${i}-size`) as string || '0');
+      
+      console.log(`✅ [MAILGUN] Audio attachment found:`, {
+        filename,
+        contentType,
+        size,
+        url: url ? 'Present' : 'Missing'
+      });
       
       attachments.push({
         filename,
@@ -252,6 +331,11 @@ export function getAudioAttachments(formData: FormData): MailgunAttachment[] {
       });
     }
   }
+  
+  console.log('🎵 [MAILGUN] Audio attachments processed:', {
+    totalFound: attachments.length,
+    filenames: attachments.map(a => a.filename)
+  });
   
   return attachments;
 }
@@ -286,7 +370,7 @@ function isAudioFile(filename: string, contentType: string): boolean {
 }
 
 /**
- * Send email via Mailgun API with timeout handling
+ * Send email via Mailgun SDK following official documentation patterns
  * @param to - Recipient email
  * @param template - Email template
  * @param abortSignal - Abort signal for timeout
@@ -299,31 +383,42 @@ export async function sendEmail(
 ): Promise<boolean> {
   try {
     const config = getMailgunConfig();
+    const mg = getMailgunClient();
     
-    const formData = new FormData();
-    formData.append('from', `Voice Transcription <noreply@${config.domain}>`);
-    formData.append('to', to);
-    formData.append('subject', template.subject);
-    formData.append('text', template.text);
-    formData.append('html', template.html);
-    
-    const response = await fetch(`${config.apiUrl}/messages`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Basic ${Buffer.from(`api:${config.apiKey}`).toString('base64')}`,
-      },
-      body: formData,
-      signal: abortSignal,
+    console.log('📧 [MAILGUN] Sending email via official SDK:', {
+      to,
+      subject: template.subject,
+      from: `Voice Transcription <${config.email}>`,
+      domain: config.domain
     });
     
-    if (!response.ok) {
-      console.error('Mailgun API error:', await response.text());
-      return false;
-    }
+    // Official SDK pattern: mg.messages.create(domain, messageData)
+    const messageData = {
+      from: `Voice Transcription <${config.email}>`,
+      to: [to], // Official pattern uses array for 'to' field
+      subject: template.subject,
+      text: template.text,
+      html: template.html
+    };
+    
+    // Use the official SDK pattern
+    const result = await mg.messages.create(config.domain, messageData);
+    
+    console.log('✅ [MAILGUN] Email sent successfully via SDK:', {
+      messageId: result.id,
+      message: result.message,
+      to,
+      status: result.status || 'queued'
+    });
     
     return true;
   } catch (error) {
-    console.error('Failed to send email:', error);
+    console.error('❌ [MAILGUN] Failed to send email via SDK:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      to,
+      subject: template.subject
+    });
     return false;
   }
 }

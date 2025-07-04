@@ -1,6 +1,5 @@
 'use client';
 
-// @ts-ignore
 import React, { useState } from 'react';
 import { UserWithStats } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -65,10 +64,8 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
   };
 
   return (
-    // @ts-ignore
     <div className="space-y-4">
       {/* Search */}
-      {/* @ts-ignore */}
       <div className="flex items-center space-x-2">
         <Input
           placeholder="Search users..."
@@ -76,12 +73,9 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
           onChange={(e) => setSearchTerm(e.target.value)}
           className="max-w-sm"
         />
-        {/* @ts-ignore */}
         <div className="text-sm text-muted-foreground">
           {filteredUsers.length} of {users.length} users
-        {/* @ts-ignore */}
         </div>
-      {/* @ts-ignore */}
       </div>
 
       {/* Table */}
@@ -115,29 +109,23 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
           {filteredUsers.map((user) => (
             <TableRow key={user.id}>
               <TableCell>
-                {/* @ts-ignore */}
                 <div className="font-medium">
                   {user.google_email}
-                {/* @ts-ignore */}
                 </div>
               </TableCell>
               <TableCell>
-                {/* @ts-ignore */}
                 <code className="text-sm bg-muted px-2 py-1 rounded">
                   {user.slug}
-                {/* @ts-ignore */}
                 </code>
               </TableCell>
               <TableCell>
-                <Badge variant={user.approved ? "success" : "secondary"}>
-                  {user.approved ? "Approved" : "Pending"}
+                <Badge variant={Boolean(user.approved) ? "success" : "secondary"}>
+                  {Boolean(user.approved) ? "Approved" : "Pending"}
                 </Badge>
               </TableCell>
               <TableCell>
-                {/* @ts-ignore */}
                 <div className="text-center">
                   {user.voice_events_count || 0}
-                {/* @ts-ignore */}
                 </div>
               </TableCell>
               <TableCell>
@@ -148,14 +136,14 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
               </TableCell>
               <TableCell>
                 <Button
-                  variant={user.approved ? "destructive" : "default"}
+                  variant={Boolean(user.approved) ? "destructive" : "default"}
                   size="sm"
                   onClick={() => toggleUserApproval(user.id)}
                   disabled={loading === user.id}
                 >
                   {loading === user.id
                     ? "Loading..."
-                    : user.approved
+                    : Boolean(user.approved)
                     ? "Revoke"
                     : "Approve"
                   }
@@ -167,13 +155,10 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
       </Table>
 
       {filteredUsers.length === 0 && (
-        // @ts-ignore
         <div className="text-center py-8 text-muted-foreground">
           {searchTerm ? "No users found matching your search." : "No users found."}
-        {/* @ts-ignore */}
         </div>
       )}
-    {/* @ts-ignore */}
     </div>
   );
 } 

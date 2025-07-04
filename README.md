@@ -478,3 +478,88 @@ This voice note transcription service is now production-ready with:
 - ✅ Full Vercel deployment optimization
 
 Perfect for organizations needing reliable voice-to-text processing with user management and admin oversight.
+
+## 🛠️ Development Guide
+
+### Development Modes
+
+#### 🚀 **Full Development Mode (Recommended)**
+```bash
+npm run dev:api
+```
+- **URL**: http://localhost:3000
+- **Features**: Complete frontend + API routes + AI analysis
+- **Best for**: Testing full functionality, API development
+- **Environment**: Uses .env.local for local development
+- **Database**: Connects to your configured D1 database or development fallback
+
+#### 🧪 **Production Environment Testing**
+```bash
+# Pull production environment variables
+vercel env pull .env.local
+
+# Run with production configuration
+vercel dev
+```
+- **URL**: http://localhost:3000
+- **Features**: Production environment variables + local development
+- **Best for**: Debugging production issues, testing with real data
+- **Environment**: Uses production environment variables
+
+#### 🔍 **Database Testing**
+```bash
+# Test database connection
+wrangler d1 execute voice-transcription-db --command "SELECT 1 as test" --remote
+
+# Run schema updates
+wrangler d1 execute voice-transcription-db --file=./sql/schema.sql --remote
+```
+
+### Development Environment Setup
+
+1. **Install dependencies**:
+   ```bash
+   npm install
+   ```
+
+2. **Set up environment variables**:
+   ```bash
+   cp env.example .env.local
+   # Edit .env.local with your development credentials
+   ```
+
+3. **Start development server**:
+   ```bash
+   npm run dev:api
+   ```
+
+4. **Access the application**:
+   - **Frontend**: http://localhost:3000
+   - **API Routes**: http://localhost:3000/api/*
+   - **Admin Dashboard**: http://localhost:3000/admin
+   - **User Dashboard**: http://localhost:3000/dashboard
+
+### Development Features
+
+- **Hot Reload**: Automatic reload on file changes
+- **API Route Testing**: All API endpoints available locally
+- **Database Integration**: Connect to D1 database or use development fallback
+- **Authentication**: Google OAuth with development callbacks
+- **Real-time Logging**: Console logs for debugging
+- **Error Handling**: Comprehensive error pages and debugging info
+
+### Development Workflow
+
+1. **Start development server**: `npm run dev:api`
+2. **Make changes**: Edit code with hot reload
+3. **Test functionality**: Use local environment for testing
+4. **Debug issues**: Check console logs and error pages
+5. **Deploy**: Push changes to Vercel for production testing
+
+### Development URLs
+
+- **Local Development**: http://localhost:3000
+- **Google OAuth Redirect**: http://localhost:3000/api/auth/callback/google
+- **Webhook Testing**: http://localhost:3000/api/inbound
+- **Admin Panel**: http://localhost:3000/admin
+- **User Dashboard**: http://localhost:3000/dashboard

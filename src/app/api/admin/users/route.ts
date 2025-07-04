@@ -21,10 +21,23 @@ export async function GET(request: NextRequest) {
     }
     
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
+    const page = parseInt(searchParams.get('page') || '1', 10);
+    const limit = parseInt(searchParams.get('limit') || '10', 10);
     
     const result = await getUsersWithStats(page, limit);
+    
+    // Add debug logging for the raw data
+    console.log('🔍 [ADMIN] Raw user data from database:', JSON.stringify(result.data, null, 2));
+    
+    // Log specific user data types
+    result.data.forEach((user, index) => {
+      console.log(`🔍 [ADMIN] User ${index + 1}:`, {
+        email: user.google_email,
+        approved: user.approved,
+        approvedType: typeof user.approved,
+        booleanValue: Boolean(user.approved)
+      });
+    });
     
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: 500 });
@@ -33,7 +46,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(result);
     
   } catch (error) {
-    console.error('Admin users API error:', error);
+    console.error('Admin users fetch error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -67,7 +80,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ 
           success: true, 
           user: result.data,
-          message: `User ${result.data?.approved ? 'approved' : 'revoked'} successfully`
+          message: `User ${Boolean(result.data?.approved) ? 'approved' : 'revoked'} successfully`
         });
       }
       

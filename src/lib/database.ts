@@ -25,6 +25,11 @@ export async function executeQuery<T = any>(
   params: any[] = []
 ): Promise<D1QueryResult<T>> {
   try {
+    console.log('🔍 [DB] Executing query:', sql);
+    console.log('🔍 [DB] Parameters:', params);
+    console.log('🔍 [DB] D1_URL:', config.D1_URL);
+    console.log('🔍 [DB] D1_API_KEY prefix:', config.D1_API_KEY?.substring(0, 10) + '...');
+    
     const response = await fetch(config.D1_URL, {
       method: 'POST',
       headers: {
@@ -37,14 +42,61 @@ export async function executeQuery<T = any>(
       }),
     });
 
+    console.log('🔍 [DB] Response status:', response.status);
+    console.log('🔍 [DB] Response statusText:', response.statusText);
+
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('🚨 [DB] Error response body:', errorText);
       throw new Error(`Database query failed: ${response.statusText}`);
     }
 
-    const result = await response.json();
-    return result;
+    const rawResult = await response.json();
+    console.log('✅ [DB] Raw query result:', rawResult);
+    
+    // Parse the Cloudflare D1 response structure
+    // Expected format: { result: [{ results: [...], success: boolean, meta: {...} }], errors: [], messages: [], success: boolean }
+    
+    if (!rawResult.success) {
+      console.error('🚨 [DB] D1 API returned success: false');
+      return {
+        success: false,
+        error: rawResult.errors?.[0]?.message || 'Database query failed',
+      };
+    }
+
+    if (!rawResult.result || !Array.isArray(rawResult.result) || rawResult.result.length === 0) {
+      console.error('🚨 [DB] Invalid D1 response structure:', rawResult);
+      return {
+        success: false,
+        error: 'Invalid database response structure',
+      };
+    }
+
+    const queryResult = rawResult.result[0];
+    
+    if (!queryResult.success) {
+      console.error('🚨 [DB] Query execution failed:', queryResult);
+      return {
+        success: false,
+        error: 'Query execution failed',
+      };
+    }
+
+    // Extract the actual results from the nested structure
+    const results = queryResult.results || [];
+    const meta = queryResult.meta || {};
+    
+    console.log('✅ [DB] Parsed results:', results);
+    console.log('✅ [DB] Query meta:', meta);
+    
+    return {
+      success: true,
+      results,
+      meta,
+    };
   } catch (error) {
-    console.error('Database error:', error);
+    console.error('🚨 [DB] Database error:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown database error',
@@ -89,22 +141,30 @@ export async function getUserBySlug(slug: string): Promise<DbResponse<User>> {
  */
 export async function getUserByEmail(email: string): Promise<DbResponse<User>> {
   try {
+    console.log('🔍 [AUTH] Getting user by email:', email);
+    
     const result = await executeQuery<User>(
       'SELECT * FROM users WHERE google_email = ? LIMIT 1',
       [email]
     );
 
+    console.log('🔍 [AUTH] getUserByEmail result:', result);
+
     if (!result.success) {
+      console.error('🚨 [AUTH] getUserByEmail failed:', result.error);
       return { success: false, error: result.error };
     }
 
     const user = result.results?.[0];
     if (!user) {
+      console.log('ℹ️ [AUTH] User not found for email:', email);
       return { success: false, error: 'User not found' };
     }
 
+    console.log('✅ [AUTH] User found:', user);
     return { success: true, data: user };
   } catch (error) {
+    console.error('🚨 [AUTH] getUserByEmail error:', error);
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Failed to get user' 
@@ -119,16 +179,23 @@ export async function getUserByEmail(email: string): Promise<DbResponse<User>> {
  */
 export async function createUser(userData: CreateUserData): Promise<DbResponse<User>> {
   try {
+    console.log('🔍 [AUTH] Creating user:', userData);
+    
     const id = generateUserId();
     const slug = userData.slug || generateEmailSlug();
     const approved = userData.approved ? 1 : 0;
+
+    console.log('🔍 [AUTH] User creation details:', { id, slug, approved });
 
     const result = await executeQuery(
       'INSERT INTO users (id, google_email, slug, approved) VALUES (?, ?, ?, ?)',
       [id, userData.google_email, slug, approved]
     );
 
+    console.log('🔍 [AUTH] createUser result:', result);
+
     if (!result.success) {
+      console.error('🚨 [AUTH] createUser failed:', result.error);
       return { success: false, error: result.error };
     }
 
@@ -141,8 +208,10 @@ export async function createUser(userData: CreateUserData): Promise<DbResponse<U
       created_at: new Date().toISOString(),
     };
 
+    console.log('✅ [AUTH] User created successfully:', user);
     return { success: true, data: user };
   } catch (error) {
+    console.error('🚨 [AUTH] createUser error:', error);
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Failed to create user' 
@@ -168,7 +237,16 @@ export async function toggleUserApproval(userId: string): Promise<DbResponse<Use
     }
 
     const user = currentUser.results[0];
-    const newApprovalStatus = user.approved ? 0 : 1;
+    // Ensure proper boolean conversion - D1 might return integers or strings
+    const isCurrentlyApproved = Boolean(user.approved);
+    const newApprovalStatus = isCurrentlyApproved ? 0 : 1;
+
+    console.log('🔍 [DB] Toggle approval:', { 
+      userId, 
+      currentApproved: user.approved, 
+      isCurrentlyApproved, 
+      newApprovalStatus 
+    });
 
     const result = await executeQuery(
       'UPDATE users SET approved = ? WHERE id = ?',
@@ -361,14 +439,27 @@ export async function getVoiceEventsByUser(
  */
 export async function isSlugTaken(slug: string): Promise<boolean> {
   try {
+    console.log('🔍 [AUTH] Checking if slug is taken:', slug);
+    
     const result = await executeQuery<{ count: number }>(
       'SELECT COUNT(*) as count FROM users WHERE slug = ?',
       [slug]
     );
 
-    return (result.results?.[0]?.count || 0) > 0;
+    console.log('🔍 [AUTH] isSlugTaken result:', result);
+
+    if (!result.success) {
+      console.error('🚨 [AUTH] isSlugTaken query failed:', result.error);
+      return true; // Assume taken on error for safety
+    }
+
+    const count = result.results?.[0]?.count || 0;
+    const taken = count > 0;
+    console.log(`🔍 [AUTH] Slug "${slug}" taken: ${taken} (count: ${count})`);
+    
+    return taken;
   } catch (error) {
-    console.error('Error checking slug:', error);
+    console.error('🚨 [AUTH] Error checking slug:', error);
     return true; // Assume taken on error for safety
   }
 }
@@ -378,19 +469,26 @@ export async function isSlugTaken(slug: string): Promise<boolean> {
  * @returns Promise<string> - Unique slug
  */
 export async function generateUniqueSlug(): Promise<string> {
+  console.log('🔍 [AUTH] Generating unique slug...');
+  
   let attempts = 0;
   const maxAttempts = 10;
 
   while (attempts < maxAttempts) {
     const slug = generateEmailSlug();
+    console.log(`🔍 [AUTH] Attempt ${attempts + 1}: Generated slug "${slug}"`);
+    
     const isTaken = await isSlugTaken(slug);
+    console.log(`🔍 [AUTH] Slug "${slug}" is taken:`, isTaken);
     
     if (!isTaken) {
+      console.log(`✅ [AUTH] Found available slug: "${slug}"`);
       return slug;
     }
     
     attempts++;
   }
 
+  console.error('🚨 [AUTH] Failed to generate unique slug after maximum attempts');
   throw new Error('Failed to generate unique slug after maximum attempts');
 } 

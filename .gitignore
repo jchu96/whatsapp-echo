@@ -176,3 +176,8 @@ test-audio.*
 # Misc
 *.tgz
 *.tar.gz
+
+# Sentry Config File
+.env.sentry-build-plugin
+
+.env*.local

@@ -18,91 +18,136 @@ declare var process: {
  * @returns NextResponse - Response or redirect
  */
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  try {
+    const { pathname } = request.nextUrl;
+    
+    console.log('🔍 [MIDDLEWARE] Processing:', pathname);
+    console.log('🔍 [MIDDLEWARE] Full URL:', request.url);
+    console.log('🔍 [MIDDLEWARE] Method:', request.method);
 
-  // Skip middleware for auth routes, static files, and API routes that don't need protection
-  if (
-    pathname.startsWith('/api/auth') ||
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/favicon.ico') ||
-    pathname === '/auth/signin' ||
-    pathname === '/auth/error'
-  ) {
-    return NextResponse.next();
-  }
+    // Check each condition individually for debugging
+    const isApiAuth = pathname.startsWith('/api/auth');
+    const isApiInbound = pathname.startsWith('/api/inbound');
+    const isNext = pathname.startsWith('/_next');
+    const isFavicon = pathname.startsWith('/favicon.ico');
+    const isSignin = pathname === '/auth/signin';
+    const isError = pathname === '/auth/error';
+    const isApprovalPending = pathname === '/approval-pending';
+    
+    console.log('🔍 [MIDDLEWARE] Condition checks:', {
+      isApiAuth,
+      isApiInbound,
+      isNext,
+      isFavicon,
+      isSignin,
+      isError,
+      isApprovalPending
+    });
 
-  // Get the user's session token
-  const token = await getToken({
-    req: request,
-    secret: process.env.NEXTAUTH_SECRET,
-  });
+    // Skip middleware for auth routes, static files, and API routes that don't need protection
+    if (isApiAuth || isApiInbound || isNext || isFavicon || isSignin || isError || isApprovalPending) {
+      console.log('🔍 [MIDDLEWARE] Skipping middleware for:', pathname);
+      return NextResponse.next();
+    }
+    
+    console.log('🔍 [MIDDLEWARE] Continuing with middleware for:', pathname);
 
-  // Public routes that don't require authentication
-  const publicRoutes = [
-    '/',
-    '/about',
-    '/contact',
-  ];
+    // Get the user's session token
+    const token = await getToken({
+      req: request,
+      secret: process.env.NEXTAUTH_SECRET,
+    });
+    
+    console.log('🔍 [MIDDLEWARE] Token exists:', !!token);
 
-  // Check if the current path is public
-  const isPublicRoute = publicRoutes.indexOf(pathname) !== -1;
+    // Public routes that don't require authentication
+    const publicRoutes = [
+      '/',
+      '/about',
+      '/contact',
+    ];
 
-  // If user is not authenticated and trying to access a protected route
-  if (!token && !isPublicRoute) {
-    const signInUrl = new URL('/auth/signin', request.url);
-    signInUrl.searchParams.set('callbackUrl', pathname);
-    return NextResponse.redirect(signInUrl);
-  }
+    // Check if the current path is public
+    const isPublicRoute = publicRoutes.indexOf(pathname) !== -1;
 
-  // Admin routes protection
-  if (pathname.startsWith('/admin')) {
-    // Must be authenticated to access admin routes
-    if (!token) {
+    // If user is not authenticated and trying to access a protected route
+    if (!token && !isPublicRoute) {
       const signInUrl = new URL('/auth/signin', request.url);
       signInUrl.searchParams.set('callbackUrl', pathname);
       return NextResponse.redirect(signInUrl);
     }
 
-    // Check if user is admin
-    const userEmail = token.email as string;
-    if (!userEmail || !isAdminEmail(userEmail)) {
-      // Redirect non-admin users to dashboard or home
-      return NextResponse.redirect(new URL('/dashboard', request.url));
-    }
-  }
-
-  // Protected routes that require approval
-  const approvalRequiredRoutes = [
-    '/dashboard',
-    '/profile',
-    '/api/voice',
-  ];
-
-  const requiresApproval = approvalRequiredRoutes.some(route => 
-    pathname.startsWith(route)
-  );
-
-  if (requiresApproval && token) {
-    try {
-      // Get user data to check approval status
-      const userEmail = token.email as string;
-      const userResult = await getUserByEmail(userEmail);
-
-      if (userResult.success && userResult.data) {
-        const user = userResult.data;
-        
-        // If user is not approved and not an admin, redirect to approval page
-        if (!user.approved && !isAdminEmail(userEmail)) {
-          return NextResponse.redirect(new URL('/approval-pending', request.url));
-        }
+    // Admin routes protection
+    if (pathname.startsWith('/admin')) {
+      // Must be authenticated to access admin routes
+      if (!token) {
+        const signInUrl = new URL('/auth/signin', request.url);
+        signInUrl.searchParams.set('callbackUrl', pathname);
+        return NextResponse.redirect(signInUrl);
       }
-    } catch (error) {
-      console.error('Middleware error checking user approval:', error);
-      // Continue without blocking on error
-    }
-  }
 
-  return NextResponse.next();
+      // Check if user is admin
+      const userEmail = token.email as string;
+      if (!userEmail || !isAdminEmail(userEmail)) {
+        // Redirect non-admin users to dashboard or home
+        return NextResponse.redirect(new URL('/dashboard', request.url));
+      }
+    }
+
+    // Protected routes that require approval
+    const approvalRequiredRoutes = [
+      '/dashboard',
+      '/profile',
+      '/api/voice',
+    ];
+
+    const requiresApproval = approvalRequiredRoutes.some(route => 
+      pathname.startsWith(route)
+    );
+
+    if (requiresApproval && token) {
+      console.log('🔍 [MIDDLEWARE] Checking approval for:', pathname);
+      try {
+        // Get user data to check approval status
+        const userEmail = token.email as string;
+        const userResult = await getUserByEmail(userEmail);
+        
+        console.log('🔍 [MIDDLEWARE] User result:', userResult.success, userResult.data?.approved);
+        console.log('🔍 [MIDDLEWARE] User email:', userEmail);
+        console.log('🔍 [MIDDLEWARE] Raw user data:', JSON.stringify(userResult.data, null, 2));
+
+        if (userResult.success && userResult.data) {
+          const user = userResult.data;
+          
+          // Log detailed approval information
+          console.log('🔍 [MIDDLEWARE] Approval check:', {
+            email: user.google_email,
+            approved: user.approved,
+            approvedType: typeof user.approved,
+            booleanValue: Boolean(user.approved),
+            isAdmin: isAdminEmail(userEmail)
+          });
+          
+          // If user is not approved and not an admin, redirect to approval page
+          if (!Boolean(user.approved) && !isAdminEmail(userEmail)) {
+            console.log('🔍 [MIDDLEWARE] Redirecting to approval-pending');
+            return NextResponse.redirect(new URL('/approval-pending', request.url));
+          }
+        }
+      } catch (error) {
+        console.error('Middleware error checking user approval:', error);
+        // Continue without blocking on error
+      }
+    }
+
+    console.log('🔍 [MIDDLEWARE] Returning NextResponse.next() for:', pathname);
+    return NextResponse.next();
+  } catch (error) {
+    console.error('🚨 [MIDDLEWARE] Error in middleware:', error);
+    console.error('🚨 [MIDDLEWARE] Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
+    // Return next() to avoid blocking requests
+    return NextResponse.next();
+  }
 }
 
 /**

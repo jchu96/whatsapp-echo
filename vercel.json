@@ -1,13 +1,13 @@
 {
   "version": 2,
   "functions": {
-    "app/api/inbound/route.ts": {
+    "src/app/api/inbound/route.ts": {
       "maxDuration": 60
     },
-    "app/api/admin/users/route.ts": {
+    "src/app/api/admin/users/route.ts": {
       "maxDuration": 30
     },
-    "app/api/*/route.ts": {
+    "src/app/api/*/route.ts": {
       "maxDuration": 10
     }
   },

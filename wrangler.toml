@@ -3,11 +3,11 @@ compatibility_date = "2024-01-01"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "voice-transcription-prod"
-database_id = "113aa2be-2de8-4cc5-9c66-9e413d1cc121"
+database_name = "voice-transcription-db"
+database_id = "3a4b216e-4a33-401c-8225-0f377ae1e149"
 
 # For development/testing
 [[d1_databases]]
 binding = "DB_DEV"
-database_name = "voice-transcription-dev"
-database_id = "dd1ef486-decf-4f5e-bf07-db9f2fedf072" 
+database_name = "voice-transcription-db"
+database_id = "3a4b216e-4a33-401c-8225-0f377ae1e149"

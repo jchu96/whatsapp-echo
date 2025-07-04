@@ -89,6 +89,7 @@ export interface EnvConfig {
   // Phase 2 additions
   MAILGUN_DOMAIN: string;
   MAILGUN_API_KEY: string;
+  MAILGUN_EMAIL: string;
   OPENAI_API_KEY: string;
   MAX_FILE_SIZE_MB?: string;
   DOWNLOAD_TIMEOUT_SEC?: string;

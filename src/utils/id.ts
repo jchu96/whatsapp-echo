@@ -1,14 +1,14 @@
 // @ts-ignore
-import cuid from 'cuid';
-// @ts-ignore
 import { nanoid, customAlphabet } from 'nanoid';
 
 /**
- * Generate a unique CUID for database primary keys
- * @returns string - A unique CUID
+ * Generate a unique ID for database primary keys
+ * Uses nanoid instead of cuid for better server-side compatibility
+ * @returns string - A unique ID
  */
 export function generateCuid(): string {
-  return cuid();
+  // Generate a 21-character nanoid (similar length to cuid)
+  return nanoid(21);
 }
 
 /**
@@ -21,40 +21,40 @@ export function generateSlug(): string {
 
 /**
  * Generate a unique slug that's safe for email addresses
- * Uses only URL-safe characters (no special characters)
- * @returns string - A 6-character URL-safe slug
+ * Uses only lowercase letters and numbers for consistent formatting
+ * @returns string - A 6-character lowercase slug
  */
 export function generateEmailSlug(): string {
-  // Use URL-safe alphabet (no special characters)
-  const alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+  // Use only lowercase letters and numbers for consistent formatting
+  const alphabet = '0123456789abcdefghijklmnopqrstuvwxyz';
   const customNanoid = customAlphabet(alphabet, 6);
   return customNanoid();
 }
 
 /**
- * Validate if a string is a valid CUID
+ * Validate if a string is a valid ID
+ * Updated to validate nanoid format instead of cuid
  * @param id - The string to validate
- * @returns boolean - True if valid CUID format
+ * @returns boolean - True if valid ID format
  */
 export function isValidCuid(id: string): boolean {
-  // CUID format: c + timestamp + counter + fingerprint + random
-  // Should start with 'c' and be 25 characters long
-  return /^c[a-z0-9]{24}$/.test(id);
+  // nanoid uses URL-safe characters and is typically 21 characters
+  return /^[a-zA-Z0-9_-]{21}$/.test(id);
 }
 
 /**
  * Validate if a string is a valid slug
  * @param slug - The string to validate
- * @returns boolean - True if valid slug format
+ * @returns boolean - True if valid slug format (lowercase only)
  */
 export function isValidSlug(slug: string): boolean {
-  // Must be exactly 6 characters, alphanumeric
-  return /^[a-zA-Z0-9]{6}$/.test(slug);
+  // Must be exactly 6 characters, lowercase alphanumeric only
+  return /^[a-z0-9]{6}$/.test(slug);
 }
 
 /**
  * Generate a unique identifier for voice events
- * @returns string - A unique CUID for voice events
+ * @returns string - A unique ID for voice events
  */
 export function generateVoiceEventId(): string {
   return generateCuid();
@@ -62,7 +62,7 @@ export function generateVoiceEventId(): string {
 
 /**
  * Generate a unique identifier for users
- * @returns string - A unique CUID for users
+ * @returns string - A unique ID for users
  */
 export function generateUserId(): string {
   return generateCuid();

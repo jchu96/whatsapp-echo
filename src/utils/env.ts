@@ -11,26 +11,39 @@ declare var process: {
  */
 export function validateEnvConfig(): void {
   const requiredEnvVars = [
-    'NEXTAUTH_URL',
     'NEXTAUTH_SECRET',
     'GOOGLE_CLIENT_ID',
     'GOOGLE_CLIENT_SECRET',
-    'D1_URL',
-    'D1_DATABASE_ID',
-    'D1_API_KEY',
     'ADMIN_EMAILS',
-    // Phase 2 additions
-    'MAILGUN_DOMAIN',
-    'MAILGUN_API_KEY',
-    'OPENAI_API_KEY',
   ];
+
+  // In development, only require core auth variables
+  if (process.env.NODE_ENV === 'production') {
+    requiredEnvVars.push(
+      'D1_URL',
+      'D1_DATABASE_ID',
+      'D1_API_KEY',
+      'MAILGUN_DOMAIN',
+      'MAILGUN_API_KEY',
+      'MAILGUN_EMAIL',
+      'MAILGUN_WEBHOOK_SIGNING_KEY',
+      'OPENAI_API_KEY'
+    );
+  }
 
   const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
 
   if (missingVars.length > 0) {
-    throw new Error(
-      `Missing required environment variables: ${missingVars.join(', ')}`
+    console.warn(
+      `Missing environment variables: ${missingVars.join(', ')}`
     );
+    
+    // Only throw in production
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(
+        `Missing required environment variables: ${missingVars.join(', ')}`
+      );
+    }
   }
 }
 
@@ -42,20 +55,21 @@ export function getEnvConfig(): EnvConfig {
   validateEnvConfig();
 
   return {
-    NEXTAUTH_URL: process.env.NEXTAUTH_URL!,
-    NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET!,
-    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID!,
-    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET!,
-    D1_URL: process.env.D1_URL!,
-    D1_DATABASE_ID: process.env.D1_DATABASE_ID!,
-    D1_API_KEY: process.env.D1_API_KEY!,
-    ADMIN_EMAILS: process.env.ADMIN_EMAILS!,
+    NEXTAUTH_URL: process.env.NEXTAUTH_URL || getBaseUrl(),
+    NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET || 'development-secret-key',
+    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
+    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || '',
+    D1_URL: process.env.D1_URL || 'https://api.cloudflare.com/client/v4/accounts/ACCOUNT_ID/d1/database/DATABASE_ID/query',
+    D1_DATABASE_ID: process.env.D1_DATABASE_ID || 'dev-database-id',
+    D1_API_KEY: process.env.D1_API_KEY || 'dev-api-key',
+    ADMIN_EMAILS: process.env.ADMIN_EMAILS || 'admin@example.com',
     VERCEL_URL: process.env.VERCEL_URL,
     VERCEL_ENV: process.env.VERCEL_ENV,
     // Phase 2 additions
-    MAILGUN_DOMAIN: process.env.MAILGUN_DOMAIN!,
-    MAILGUN_API_KEY: process.env.MAILGUN_API_KEY!,
-    OPENAI_API_KEY: process.env.OPENAI_API_KEY!,
+    MAILGUN_DOMAIN: process.env.MAILGUN_DOMAIN || 'example.com',
+    MAILGUN_API_KEY: process.env.MAILGUN_API_KEY || 'key-dev-key',
+    MAILGUN_EMAIL: process.env.MAILGUN_EMAIL || 'noreply@example.com',
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY || 'sk-dev-key',
     MAX_FILE_SIZE_MB: process.env.MAX_FILE_SIZE_MB,
     DOWNLOAD_TIMEOUT_SEC: process.env.DOWNLOAD_TIMEOUT_SEC,
     PROCESSING_TIMEOUT_SEC: process.env.PROCESSING_TIMEOUT_SEC,
@@ -92,6 +106,12 @@ export function getBaseUrl(): string {
   if (process.env.VERCEL_URL) {
     return `https://${process.env.VERCEL_URL}`;
   }
+  
+  // Handle development with different ports
+  if (process.env.NODE_ENV === 'development') {
+    return process.env.NEXTAUTH_URL || 'http://localhost:3000';
+  }
+  
   return process.env.NEXTAUTH_URL || 'http://localhost:3000';
 }
 
@@ -138,9 +158,11 @@ export function getAudioProcessingConfig() {
  */
 export function getMailgunConfig() {
   return {
-    domain: process.env.MAILGUN_DOMAIN!,
-    apiKey: process.env.MAILGUN_API_KEY!,
-    apiUrl: `https://api.mailgun.net/v3/${process.env.MAILGUN_DOMAIN!}`,
+    domain: process.env.MAILGUN_DOMAIN || 'example.com',
+    apiKey: process.env.MAILGUN_API_KEY || 'key-dev-key',
+    email: process.env.MAILGUN_EMAIL || `noreply@${process.env.MAILGUN_DOMAIN || 'example.com'}`,
+    apiUrl: `https://api.mailgun.net/v3/${process.env.MAILGUN_DOMAIN || 'example.com'}`,
+    webhookKey: process.env.MAILGUN_WEBHOOK_SIGNING_KEY || 'webhook-dev-key',
   };
 }
 
@@ -150,7 +172,7 @@ export function getMailgunConfig() {
  */
 export function getOpenAIConfig() {
   return {
-    apiKey: process.env.OPENAI_API_KEY!,
+    apiKey: process.env.OPENAI_API_KEY || 'sk-dev-key',
     apiUrl: 'https://api.openai.com/v1',
   };
 } 
