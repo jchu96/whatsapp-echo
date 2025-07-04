@@ -1,8 +1,6 @@
 // @ts-ignore
 import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from "@sentry/nextjs";
-import formidable from 'formidable';
-import fs from 'fs';
 import { 
   verifyMailgunSignature, 
   extractUserSlug, 
@@ -10,7 +8,7 @@ import {
   sendErrorEmail 
 } from '@/lib/mailgun';
 import { getUserBySlug, insertVoiceEvent } from '@/lib/database';
-import { validateAudioFile, downloadAudioFile, createAudioFile } from '@/lib/audio';
+import { validateAudioFile } from '@/lib/audio';
 import { fastTranscribeAudio, cleanTranscription, categorizeWhisperError } from '@/lib/whisper';
 import { 
   categorizeError, 
@@ -27,99 +25,27 @@ import {
 import { getAudioProcessingConfig } from '@/utils/env';
 import { AudioFile, ProcessingContext, TimeoutErrorType } from '@/types';
 
+// TypeScript interface for Mailgun webhook data
+interface MailgunWebhookData {
+  recipient: string;
+  sender: string;
+  subject: string;
+  'body-plain': string;
+  'body-html': string;
+  'message-headers': string;
+  'attachment-count': string;
+  timestamp: string;
+  signature: string;
+  token: string;
+}
+
 // Vercel configuration for Hobby tier optimization
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 // Note: In App Router, body parsing is handled differently - no config needed
 
-/**
- * Parse Mailgun webhook payload from formidable fields
- */
-function parseMailgunWebhookFromFields(fields: any) {
-  const getField = (name: string) => {
-    const field = fields[name];
-    return Array.isArray(field) ? field[0] : field;
-  };
 
-  return {
-    recipient: getField('recipient') as string,
-    sender: getField('sender') as string,
-    subject: getField('subject') as string,
-    'body-plain': getField('body-plain') as string,
-    'body-html': getField('body-html') as string,
-    'message-headers': getField('message-headers') as string,
-    'attachment-count': getField('attachment-count') as string,
-    timestamp: getField('timestamp') as string,
-    signature: getField('signature') as string,
-    token: getField('token') as string,
-  };
-}
-
-/**
- * Extract audio attachments from formidable files and read into memory
- */
-function getAudioAttachmentsFromFiles(files: any): (AudioFile & { buffer: Buffer })[] {
-  const attachments: (AudioFile & { buffer: Buffer })[] = [];
-  
-  console.log('🎵 [FORMIDABLE] Processing files:', {
-    fileKeys: Object.keys(files),
-    totalFiles: Object.keys(files).length
-  });
-  
-  // Get all attachment files
-  const attachmentEntries = Object.entries(files)
-    .filter(([key]) => key.startsWith('attachment-'));
-    
-  console.log('🎵 [FORMIDABLE] Found attachment entries:', attachmentEntries.length);
-  
-  attachmentEntries.forEach(([key, fileData]: [string, any]) => {
-    // formidable can return single file or array
-    const file = Array.isArray(fileData) ? fileData[0] : fileData;
-    
-    console.log(`🎵 [FORMIDABLE] Processing ${key}:`, {
-      originalFilename: file.originalFilename,
-      mimetype: file.mimetype,
-      size: file.size,
-      filepath: file.filepath
-    });
-    
-    if (file.originalFilename && file.mimetype && isAudioFile(file.originalFilename, file.mimetype)) {
-      console.log(`✅ [FORMIDABLE] Audio file detected: ${file.originalFilename}`);
-      
-      try {
-        // Read file data immediately into memory
-        const buffer = fs.readFileSync(file.filepath);
-        
-        // Clean up the temporary file immediately
-        fs.unlinkSync(file.filepath);
-        
-        console.log(`📦 [FORMIDABLE] File loaded into memory: ${file.originalFilename} (${buffer.length} bytes)`);
-        
-        attachments.push({
-          filename: file.originalFilename,
-          size: file.size,
-          contentType: file.mimetype,
-          url: '', // We have the file directly, no URL needed
-          buffer: buffer // Store file data in memory
-        });
-      } catch (error) {
-        console.error(`❌ [FORMIDABLE] Failed to read file ${file.originalFilename}:`, error);
-      }
-    } else {
-      console.log(`❌ [FORMIDABLE] Non-audio file skipped: ${file.originalFilename}`);
-      // Clean up non-audio files too
-      try {
-        fs.unlinkSync(file.filepath);
-      } catch (error) {
-        console.warn(`⚠️ [FORMIDABLE] Failed to cleanup non-audio file: ${error}`);
-      }
-    }
-  });
-  
-  console.log('🎵 [FORMIDABLE] Audio attachments loaded into memory:', attachments.length);
-  return attachments;
-}
 
 /**
  * Check if file is an audio file
@@ -169,124 +95,159 @@ export async function POST(request: NextRequest) {
   
   const metricsTracker = createMetricsTracker(startTime);
   
-  // Declare payload at function scope so it's available in catch block
-  let payload: any;
+  // Declare webhookData at function scope so it's available in catch block
+  let webhookData: MailgunWebhookData | undefined;
   
   try {
     metricsTracker.startPhase('webhook_parsing');
     console.log('📋 [INBOUND] Starting webhook parsing phase');
     
-    // Parse the multipart form data from Mailgun using formidable
-    const form = formidable({ 
-      multiples: true, 
-      maxFileSize: 100 * 1024 * 1024, // 100MB limit
-      keepExtensions: true
-    });
-    
-    // Create a promise-based wrapper for formidable
-    const parseFormData = (): Promise<[any, any]> => {
-      return new Promise((resolve, reject) => {
-        const chunks: Buffer[] = [];
-        
-        // Read the request body
-        const reader = request.body?.getReader();
-        if (!reader) {
-          reject(new Error('No request body'));
-          return;
-        }
-        
-        const pump = async () => {
-          try {
-            const { done, value } = await reader.read();
-            if (done) {
-              // Convert chunks to buffer and parse
-              const buffer = Buffer.concat(chunks);
-              const contentType = request.headers.get('content-type') || '';
-              
-              // Create a mock request object for formidable
-              const mockReq = {
-                body: buffer,
-                headers: {
-                  'content-type': contentType,
-                  'content-length': buffer.length.toString()
-                },
-                method: 'POST',
-                url: '/'
-              };
-              
-              // Parse with formidable
-              form.parse(mockReq as any, (err, fields, files) => {
-                if (err) {
-                  reject(err);
-                } else {
-                  resolve([fields, files]);
-                }
-              });
-            } else {
-              chunks.push(Buffer.from(value));
-              pump();
-            }
-          } catch (error) {
-            reject(error);
-          }
-        };
-        
-        pump();
+    // Parse multipart form data using Next.js native support
+    console.log('📋 [INBOUND] Starting FormData parsing...');
+    let formData: FormData;
+    try {
+      formData = await request.formData();
+      console.log('📋 [INBOUND] FormData parsed successfully');
+      
+      // Log all form entries for debugging
+      const allKeys = Array.from(formData.keys());
+      console.log('📋 [INBOUND] FormData keys found:', {
+        totalKeys: allKeys.length,
+        keys: allKeys,
+        attachmentKeys: allKeys.filter(key => key.startsWith('attachment-')),
+        webhookKeys: allKeys.filter(key => !key.startsWith('attachment-'))
       });
+      
+    } catch (parseError) {
+      console.error('❌ [INBOUND] Failed to parse form data:', parseError);
+      console.error('❌ [INBOUND] Parse error details:', {
+        errorMessage: parseError instanceof Error ? parseError.message : String(parseError),
+        errorStack: parseError instanceof Error ? parseError.stack : 'No stack trace',
+        contentType: request.headers.get('content-type'),
+        contentLength: request.headers.get('content-length')
+      });
+      throw new Error(`Failed to parse multipart form data: ${parseError}`);
+    }
+
+    console.log('📋 [INBOUND] Extracting webhook data from FormData...');
+
+    // Extract webhook data from FormData
+    webhookData = {
+      recipient: formData.get('recipient') as string,
+      sender: formData.get('sender') as string,
+      subject: formData.get('subject') as string,
+      'body-plain': formData.get('body-plain') as string,
+      'body-html': formData.get('body-html') as string,
+      'message-headers': formData.get('message-headers') as string,
+      'attachment-count': formData.get('attachment-count') as string,
+      timestamp: formData.get('timestamp') as string,
+      signature: formData.get('signature') as string,
+      token: formData.get('token') as string,
     };
-    
-    const [fields, files] = await parseFormData();
-    
-    console.log('📋 [FORMIDABLE] Parsed form data:', {
-      fieldKeys: Object.keys(fields),
-      fileKeys: Object.keys(files),
-      totalFields: Object.keys(fields).length,
-      totalFiles: Object.keys(files).length
+
+    console.log('📧 [INBOUND] Webhook data extracted:', {
+      sender: webhookData.sender,
+      recipient: webhookData.recipient,
+      subject: webhookData.subject,
+      timestamp: webhookData.timestamp,
+      attachmentCount: webhookData['attachment-count'],
+      hasTimestamp: !!webhookData.timestamp,
+      hasSignature: !!webhookData.signature,
+      hasToken: !!webhookData.token
     });
-    
-    payload = parseMailgunWebhookFromFields(fields);
-    
-    console.log('📧 [INBOUND] Webhook payload parsed:', {
-      sender: payload.sender,
-      recipient: payload.recipient,
-      subject: payload.subject,
-      timestamp: payload.timestamp
+
+    console.log('🎵 [INBOUND] Scanning for audio attachments...');
+
+    // Find audio attachments in FormData
+    const audioFiles: File[] = [];
+    const allAttachments: Array<{key: string, name: string, size: number, type: string, isAudio: boolean}> = [];
+
+    // Use Array.from to iterate over FormData entries
+    Array.from(formData.entries()).forEach(([key, value]) => {
+      if (key.startsWith('attachment-') && value instanceof File) {
+        const isAudio = isAudioFile(value.name, value.type);
+        
+        allAttachments.push({
+          key,
+          name: value.name,
+          size: value.size,
+          type: value.type,
+          isAudio
+        });
+        
+        console.log(`🎵 [INBOUND] Found attachment [${key}]: ${value.name}`, {
+          size: value.size,
+          type: value.type,
+          sizeInMB: Math.round(value.size / 1024 / 1024 * 100) / 100,
+          isAudio: isAudio
+        });
+        
+        if (isAudio) {
+          console.log(`✅ [INBOUND] Audio file detected: ${value.name}`);
+          audioFiles.push(value);
+        } else {
+          console.log(`❌ [INBOUND] Non-audio file skipped: ${value.name} (type: ${value.type})`);
+        }
+      }
     });
-    
+
+    console.log('🎵 [INBOUND] Attachment scan complete:', {
+      totalAttachments: allAttachments.length,
+      audioFiles: audioFiles.length,
+      expectedAttachments: webhookData['attachment-count'],
+      attachmentSummary: allAttachments.map(a => ({
+        name: a.name,
+        type: a.type,
+        isAudio: a.isAudio,
+        sizeMB: Math.round(a.size / 1024 / 1024 * 100) / 100
+      }))
+    });
+
+    if (audioFiles.length > 0) {
+      console.log('🎵 [INBOUND] Audio files ready for processing:', audioFiles.map(f => ({
+        name: f.name,
+        size: f.size,
+        type: f.type,
+        sizeInMB: Math.round(f.size / 1024 / 1024 * 100) / 100
+      })));
+    }
+
     // Verify Mailgun signature for security
     console.log('🔐 [INBOUND] Verifying Mailgun signature...');
-    if (!verifyMailgunSignature(payload.timestamp, payload.token, payload.signature)) {
+    if (!verifyMailgunSignature(webhookData.timestamp, webhookData.token, webhookData.signature)) {
       console.error('❌ [INBOUND] Invalid Mailgun signature');
       
       const error = new Error('Invalid Mailgun signature');
       await handleProcessingError(error, {
-        userEmail: payload.sender,
+        userEmail: webhookData.sender,
         phase: 'signature_verification',
         additionalData: {
-          recipient: payload.recipient,
-          timestamp: payload.timestamp,
+          recipient: webhookData.recipient,
+          timestamp: webhookData.timestamp,
           securityIssue: true
         }
       });
       
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+      // Use 406 to prevent retries - signature won't become valid on retry
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 406 });
     }
     console.log('✅ [INBOUND] Mailgun signature verified');
     
     // Extract user slug from recipient email
-    const slug = extractUserSlug(payload.recipient);
+    const slug = extractUserSlug(webhookData.recipient);
     console.log('🔍 [INBOUND] Extracted user slug:', slug);
     if (!slug) {
-      console.error('❌ [INBOUND] No valid slug found in recipient:', payload.recipient);
+      console.error('❌ [INBOUND] No valid slug found in recipient:', webhookData.recipient);
       
-      const error = new Error(`No valid slug found in recipient: ${payload.recipient}`);
+      const error = new Error(`No valid slug found in recipient: ${webhookData.recipient}`);
       await handleProcessingError(error, {
-        userEmail: payload.sender,
+        userEmail: webhookData.sender,
         phase: 'slug_extraction',
-        additionalData: { recipient: payload.recipient }
+        additionalData: { recipient: webhookData.recipient }
       });
       
-      return NextResponse.json({ error: 'Invalid recipient' }, { status: 400 });
+      // Use 406 to prevent retries - recipient address won't change on retry
+      return NextResponse.json({ error: 'Invalid recipient' }, { status: 406 });
     }
     
     metricsTracker.startPhase('user_lookup');
@@ -333,10 +294,11 @@ export async function POST(request: NextRequest) {
       // Don't send error email for unknown users (security), but do report to Sentry
       await handleProcessingError(error, {
         phase: 'user_lookup',
-        additionalData: { slug, recipient: payload.recipient }
+        additionalData: { slug, recipient: webhookData.recipient }
       });
       
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      // Use 406 to prevent retries - user won't appear on retry
+      return NextResponse.json({ error: 'User not found' }, { status: 406 });
     }
     
     const user = userResult.data;
@@ -359,17 +321,12 @@ export async function POST(request: NextRequest) {
         additionalData: { slug: user.slug }
       }, controller.signal);
       
-      return NextResponse.json({ error: 'User not approved' }, { status: 403 });
+      // Use 406 to prevent retries - approval status won't change automatically
+      return NextResponse.json({ error: 'User not approved' }, { status: 406 });
     }
     console.log('✅ [INBOUND] User approved, proceeding with processing');
     
-    // Get audio attachments from formidable files
-    console.log('🎵 [INBOUND] Looking for audio attachments...');
-    
-    const audioAttachments = getAudioAttachmentsFromFiles(files);
-    console.log('🎵 [INBOUND] Found audio attachments:', audioAttachments.length);
-    
-    if (audioAttachments.length === 0) {
+    if (audioFiles.length === 0) {
       console.error('❌ [INBOUND] No audio attachments found');
       
       const error = new Error('No audio attachments found');
@@ -378,28 +335,24 @@ export async function POST(request: NextRequest) {
         userEmail: user.google_email,
         phase: 'attachment_detection',
         additionalData: { 
-          attachmentCount: audioAttachments.length,
-          totalAttachments: payload['attachment-count'] 
+          attachmentCount: audioFiles.length,
+          totalAttachments: webhookData['attachment-count'] 
         }
       }, controller.signal);
       
-      return NextResponse.json({ error: 'No audio attachments found' }, { status: 400 });
+      // Use 406 to prevent retries - same email won't have attachments on retry
+      return NextResponse.json({ error: 'No audio attachments found' }, { status: 406 });
     }
     
     // Process the first audio attachment
-    const attachment = audioAttachments[0];
-    const audioFile: AudioFile = {
-      filename: attachment.filename,
-      size: attachment.size,
-      contentType: attachment.contentType,
-      url: attachment.url
-    };
+    const audioFile = audioFiles[0];
     
-    console.log('🎵 [INBOUND] Processing audio file:', {
-      filename: audioFile.filename,
+    console.log('🎵 [INBOUND] Preparing to process audio file:', {
+      filename: audioFile.name,
       size: audioFile.size,
-      contentType: audioFile.contentType,
-      sizeInMB: Math.round(audioFile.size / 1024 / 1024 * 100) / 100
+      contentType: audioFile.type,
+      sizeInMB: Math.round(audioFile.size / 1024 / 1024 * 100) / 100,
+      lastModified: new Date(audioFile.lastModified).toISOString()
     });
     
     // Create processing context
@@ -412,9 +365,15 @@ export async function POST(request: NextRequest) {
       timeoutId
     };
     
-    console.log('🔄 [INBOUND] Starting audio processing...');
+    console.log('🔄 [INBOUND] Starting audio processing with context:', {
+      userId: context.userId,
+      userEmail: context.userEmail,
+      slug: context.slug,
+      timeoutRemaining: Math.max(0, config.processingTimeoutSec * 1000 - (Date.now() - startTime))
+    });
+    
     // Process the audio file
-    const result = await processVoiceNote(audioFile, attachment.buffer, context, metricsTracker);
+    const result = await processVoiceNote(audioFile, context, metricsTracker);
     
     clearTimeout(timeoutId);
     
@@ -430,8 +389,26 @@ export async function POST(request: NextRequest) {
       error: result.error
     });
     
+    // Processing result summary
+    console.log('📊 [INBOUND] Processing result summary:', {
+      success: result.success,
+      error: result.error,
+      errorType: result.errorType,
+      totalProcessingTime: Date.now() - startTime,
+      metricsSnapshot: {
+        totalTime: metrics.totalTime,
+        fileSize: metrics.fileSize
+      }
+    });
+    
     if (result.success) {
       console.log('✅ [INBOUND] Voice note processed successfully');
+      console.log('✅ [INBOUND] Success metrics:', {
+        filename: audioFile.name,
+        processingTimeMs: metrics.totalTime,
+        fileSizeMB: Math.round(audioFile.size / 1024 / 1024 * 100) / 100,
+        transcriptionLength: 'Not logged for privacy'
+      });
       return NextResponse.json({ 
         message: 'Voice note processed successfully',
         metrics: {
@@ -440,7 +417,13 @@ export async function POST(request: NextRequest) {
         }
       });
     } else {
-      console.log('❌ [INBOUND] Processing failed:', result.error);
+      console.log('❌ [INBOUND] Processing failed with details:', {
+        error: result.error,
+        errorType: result.errorType,
+        filename: audioFile.name,
+        processingTimeMs: Date.now() - startTime,
+        phase: 'Unknown'
+      });
       return NextResponse.json(
         { error: result.error || 'Processing failed' }, 
         { status: 500 }
@@ -453,18 +436,40 @@ export async function POST(request: NextRequest) {
     console.error('❌ [INBOUND] Webhook processing error:', error);
     console.error('❌ [INBOUND] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     
-    // Enhanced error handling with guaranteed user notification and Sentry reporting
+    // Enhanced error logging with detailed context
+    console.error('❌ [INBOUND] Webhook processing failed with full context:', {
+      error: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : 'No stack trace',
+      errorType: error instanceof Error ? error.constructor.name : typeof error,
+      processingTimeMs: Date.now() - startTime,
+      requestHeaders: {
+        contentType: request.headers.get('content-type'),
+        contentLength: request.headers.get('content-length'),
+        userAgent: request.headers.get('user-agent')
+      }
+    });
+
+    // Try to get user email from already parsed webhook data if available
     let userEmail: string | undefined;
     try {
-      // Try to get user email from already parsed payload if available
-      if (typeof payload !== 'undefined' && payload.sender) {
-        userEmail = payload.sender;
-        console.log('📧 [INBOUND] Using sender from parsed payload:', userEmail);
+      if (webhookData?.sender) {
+        userEmail = webhookData.sender;
+        console.log('📧 [INBOUND] Using sender from parsed webhook data:', {
+          userEmail,
+          hasWebhookData: !!webhookData,
+          webhookKeys: webhookData ? Object.keys(webhookData) : []
+        });
       } else {
-        console.log('📧 [INBOUND] No parsed payload available, user email unknown');
+        console.log('📧 [INBOUND] No webhook data available for error context:', {
+          hasWebhookData: !!webhookData,
+          webhookDataType: typeof webhookData
+        });
       }
     } catch (parseError) {
-      console.error('❌ [INBOUND] Could not get user email for error handling:', parseError);
+      console.error('❌ [INBOUND] Could not get user email for error handling:', {
+        parseError: parseError instanceof Error ? parseError.message : String(parseError),
+        hasWebhookData: !!webhookData
+      });
     }
     
     const metrics = metricsTracker.getMetrics(0, false);
@@ -494,16 +499,36 @@ export async function POST(request: NextRequest) {
  * @returns Processing result
  */
 async function processVoiceNote(
-  audioFile: AudioFile, 
-  audioBuffer: Buffer,
+  audioFile: File, 
   context: ProcessingContext,
   metricsTracker: any
 ): Promise<{ success: boolean; error?: string; errorType?: TimeoutErrorType }> {
   
+  console.log('🔍 [PROCESS] Starting processVoiceNote with File object:', {
+    name: audioFile.name,
+    size: audioFile.size,
+    type: audioFile.type,
+    lastModified: new Date(audioFile.lastModified).toISOString()
+  });
+
+  const audioFileData: AudioFile = {
+    filename: audioFile.name,
+    size: audioFile.size,
+    contentType: audioFile.type,
+    url: '' // Not needed since we have the File object
+  };
+
+  console.log('📁 [PROCESS] AudioFile metadata created:', {
+    filename: audioFileData.filename,
+    size: audioFileData.size,
+    contentType: audioFileData.contentType,
+    sizeInMB: Math.round(audioFileData.size / 1024 / 1024 * 100) / 100
+  });
+
   const errorContext = createErrorContext(context, {
-    filename: audioFile.filename,
-    fileSize: audioFile.size,
-    contentType: audioFile.contentType
+    filename: audioFileData.filename,
+    fileSize: audioFileData.size,
+    contentType: audioFileData.contentType
   });
   
   try {
@@ -511,7 +536,7 @@ async function processVoiceNote(
     console.log('🔍 [PROCESS] Starting validation phase');
     
     // Validate audio file
-    const validation = validateAudioFile(audioFile);
+    const validation = validateAudioFile(audioFileData);
     console.log('🔍 [PROCESS] Validation result:', {
       isValid: validation.isValid,
       errorType: validation.errorType,
@@ -524,8 +549,8 @@ async function processVoiceNote(
       const error = new AudioProcessingError(
         validation.errorMessage || 'Audio validation failed',
         validation.errorType!,
-        audioFile.filename,
-        audioFile.size
+        audioFileData.filename,
+        audioFileData.size
       );
       
       await handleProcessingError(error, {
@@ -542,36 +567,42 @@ async function processVoiceNote(
     console.log('✅ [PROCESS] Audio validation passed');
     
     metricsTracker.startPhase('download');
-    console.log('📦 [PROCESS] Using audio buffer from memory');
+    console.log('📦 [PROCESS] Using File object directly - no buffer conversion needed');
     
-    // Convert Buffer to ArrayBuffer for Whisper API
-    const arrayBuffer = audioBuffer.buffer.slice(audioBuffer.byteOffset, audioBuffer.byteOffset + audioBuffer.byteLength);
-    
-    console.log('📦 [PROCESS] Audio buffer prepared:', {
-      originalSize: audioFile.size,
-      bufferSize: arrayBuffer.byteLength,
-      sizeMatch: audioFile.size === arrayBuffer.byteLength
+    console.log('📦 [PROCESS] File object ready for Whisper API:', {
+      name: audioFile.name,
+      size: audioFile.size,
+      type: audioFile.type,
+      lastModified: new Date(audioFile.lastModified).toISOString()
     });
-    
-    // Create File object for Whisper API
-    const file = createAudioFile(arrayBuffer, audioFile.filename, audioFile.contentType);
-    console.log('📁 [PROCESS] Created File object for Whisper API');
     
     metricsTracker.startPhase('transcription');
     console.log('🎤 [PROCESS] Starting transcription phase');
     
-    // Transcribe with Whisper API using enhanced error handling
+    console.log('🎤 [PROCESS] Preparing File object for Whisper API:', {
+      fileName: audioFile.name,
+      fileSize: audioFile.size,
+      fileType: audioFile.type,
+      fileLastModified: new Date(audioFile.lastModified).toISOString()
+    });
+
+    console.log('🎤 [PROCESS] Starting Whisper API transcription...');
     const transcriptionResult = await withTimeoutAndErrorHandling(
-      () => fastTranscribeAudio(file, 40000),
-      45000, // 45 second timeout (slightly longer than the internal timeout)
+      () => {
+        console.log('🎤 [PROCESS] Calling fastTranscribeAudio with 40 second timeout');
+        return fastTranscribeAudio(audioFile, 40000); // audioFile is now properly handled by the Whisper function
+      },
+      45000, // 45 second timeout
       { ...errorContext, phase: 'transcription' },
       'Audio Transcription'
     );
-    
-    console.log('🎤 [PROCESS] Transcription completed:', {
-      duration: transcriptionResult.duration,
-      textLength: transcriptionResult.text?.length || 0,
-      hasText: !!transcriptionResult.text
+
+    console.log('🎤 [PROCESS] Whisper API transcription completed:', {
+      success: !!transcriptionResult,
+      duration: transcriptionResult?.duration,
+      textLength: transcriptionResult?.text?.length || 0,
+      hasText: !!transcriptionResult?.text,
+      firstChars: transcriptionResult?.text?.substring(0, 100) + (transcriptionResult?.text?.length > 100 ? '...' : '')
     });
     
     const cleanedTranscript = cleanTranscription(transcriptionResult.text);
@@ -586,31 +617,53 @@ async function processVoiceNote(
       throw new AudioProcessingError(
         'Empty transcription result',
         'general_error',
-        audioFile.filename
+        audioFileData.filename
       );
     }
     
     metricsTracker.startPhase('database');
     console.log('💾 [PROCESS] Starting database phase');
     
-    // Log voice event to database
-    await insertVoiceEvent({
+    const voiceEventData = {
       user_id: context.userId,
       duration_sec: transcriptionResult.duration,
-      bytes: arrayBuffer.byteLength
+      bytes: audioFile.size // Use original file size
+    };
+
+    console.log('💾 [PROCESS] Preparing to insert voice event:', voiceEventData);
+
+    await insertVoiceEvent(voiceEventData);
+
+    console.log('💾 [PROCESS] Voice event logged to database successfully:', {
+      userId: voiceEventData.user_id,
+      duration: voiceEventData.duration_sec,
+      bytes: voiceEventData.bytes,
+      timestamp: new Date().toISOString()
     });
-    console.log('💾 [PROCESS] Voice event logged to database');
     
     metricsTracker.startPhase('email');
     console.log('📧 [PROCESS] Starting email phase');
     
-    // Send success email with transcript
+    console.log('📧 [PROCESS] Preparing success email:', {
+      recipient: context.userEmail,
+      transcriptLength: cleanedTranscript.length,
+      filename: audioFileData.filename,
+      subject: `Voice note transcription: ${audioFileData.filename}`
+    });
+
     const emailSent = await sendSuccessEmail(
       context.userEmail,
       cleanedTranscript,
-      audioFile.filename,
+      audioFileData.filename,
       context.abortController.signal
     );
+
+    console.log('📧 [PROCESS] Email sending completed:', {
+      success: emailSent,
+      recipient: context.userEmail,
+      filename: audioFileData.filename,
+      timestamp: new Date().toISOString()
+    });
     
     console.log('📧 [PROCESS] Email sent:', emailSent);
     
@@ -669,6 +722,7 @@ export async function GET(request: NextRequest) {
   if (verifyMailgunSignature(timestamp, token, signature)) {
     return NextResponse.json({ message: 'Webhook verified' });
   } else {
-    return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+    // Use 406 to prevent retries - verification signature won't change
+    return NextResponse.json({ error: 'Invalid signature' }, { status: 406 });
   }
 } 

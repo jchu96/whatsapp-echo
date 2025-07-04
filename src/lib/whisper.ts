@@ -1,61 +1,83 @@
-// @ts-ignore
-import FormData from 'form-data';
+import OpenAI from 'openai';
 import { getOpenAIConfig } from '@/utils/env';
 import { WhisperTranscription, WhisperError, TimeoutErrorType } from '@/types';
 
 /**
+ * Estimate audio duration from file size (rough approximation)
+ */
+function estimateAudioDuration(audioFile: File): number {
+  // Rough estimation based on average bitrate
+  // This is approximate - real duration would need audio analysis libraries
+  const avgBitrateBps = 128000; // 128 kbps average for compressed audio
+  const durationSeconds = (audioFile.size * 8) / avgBitrateBps;
+  return Math.max(1, Math.round(durationSeconds)); // At least 1 second
+}
+
+/**
  * Transcribe audio using OpenAI Whisper API with timeout handling
  * @param audioFile - Audio file to transcribe
- * @param abortSignal - Abort signal for timeout control
  * @returns Promise<WhisperTranscription> - Transcription result
  */
 export async function transcribeAudio(
-  audioFile: File,
-  abortSignal: AbortSignal
+  audioFile: File
 ): Promise<WhisperTranscription> {
   const config = getOpenAIConfig();
   
   try {
-    // Create form data for multipart upload
-    const formData = new FormData();
-    formData.append('file', audioFile.stream(), {
+    console.log('🎤 [WHISPER] Initializing OpenAI client');
+    
+    // Initialize OpenAI client
+    const openai = new OpenAI({
+      apiKey: config.apiKey,
+    });
+    
+    console.log('🎤 [WHISPER] Preparing audio file for transcription:', {
       filename: audioFile.name,
-      contentType: audioFile.type,
-      knownLength: audioFile.size
-    });
-    formData.append('model', 'whisper-1');
-    formData.append('response_format', 'json');
-    formData.append('language', 'en'); // Can be made configurable
-    
-    // Make API request with timeout handling
-    const response = await fetch(`${config.apiUrl}/audio/transcriptions`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${config.apiKey}`,
-        ...formData.getHeaders()
-      },
-      // @ts-ignore - FormData from form-data package has correct type for Node.js
-      body: formData,
-      signal: abortSignal
+      size: audioFile.size,
+      type: audioFile.type
     });
     
-    if (!response.ok) {
-      const errorData = await response.json() as WhisperError;
-      throw new Error(
-        `OpenAI API error (${response.status}): ${errorData.error?.message || 'Unknown error'}`
-      );
-    }
+    console.log('🎤 [WHISPER] Making OpenAI transcription request');
     
-    const result = await response.json() as WhisperTranscription;
+    // Use the File object directly - no need to recreate it
+    const transcription = await openai.audio.transcriptions.create({
+      file: audioFile,
+      model: 'whisper-1',
+      response_format: 'json',
+      language: 'en'
+    });
+    
+    console.log('🎤 [WHISPER] OpenAI transcription completed:', {
+      hasText: !!transcription.text,
+      textLength: transcription.text?.length || 0
+    });
     
     // Validate response
-    if (!result.text || typeof result.text !== 'string') {
+    if (!transcription.text || typeof transcription.text !== 'string') {
       throw new Error('Invalid transcription response from OpenAI');
     }
+    
+    // Estimate duration since OpenAI doesn't provide it
+    const estimatedDuration = estimateAudioDuration(audioFile);
+
+    // Convert to our expected format
+    const result: WhisperTranscription = {
+      text: transcription.text,
+      duration: estimatedDuration // Use estimated duration
+    };
+    
+    console.log('🎤 [WHISPER] Transcription result prepared:', {
+      hasText: !!result.text,
+      textLength: result.text?.length || 0,
+      estimatedDuration: result.duration,
+      fileSizeMB: Math.round(audioFile.size / 1024 / 1024 * 100) / 100
+    });
     
     return result;
     
   } catch (error) {
+    console.error('🎤 [WHISPER] Transcription error:', error);
+    
     if (error instanceof Error) {
       if (error.name === 'AbortError') {
         throw new Error('Transcription timeout exceeded');
@@ -91,19 +113,31 @@ export async function fastTranscribeAudio(
   audioFile: File,
   timeoutMs: number = 40000
 ): Promise<WhisperTranscription> {
+  console.log('🎤 [WHISPER] Starting fast transcription with timeout:', {
+    timeoutMs,
+    filename: audioFile.name,
+    fileSizeMB: Math.round(audioFile.size / 1024 / 1024 * 100) / 100
+  });
+  
   const controller = new AbortController();
   
   // Set timeout for the transcription process
   const timeoutId = setTimeout(() => {
+    console.log('⏰ [WHISPER] Transcription timeout reached, aborting...');
     controller.abort();
   }, timeoutMs);
   
   try {
-    const result = await transcribeAudio(audioFile, controller.signal);
+    const result = await transcribeAudio(audioFile);
     clearTimeout(timeoutId);
     return result;
   } catch (error) {
     clearTimeout(timeoutId);
+    console.error('❌ [WHISPER] Fast transcription failed:', {
+      error: error instanceof Error ? error.message : String(error),
+      filename: audioFile.name,
+      timeoutMs
+    });
     throw error;
   }
 }
@@ -136,7 +170,8 @@ export function validateAudioForWhisper(audioFile: File): {
     'audio/ogg',      // ogg
     'audio/aac',      // aac
     'audio/flac',     // flac
-    'audio/x-m4a'     // m4a variant
+    'audio/x-m4a',    // m4a variant
+    'audio/mp4a-latm' // m4a Mailgun specific format
   ];
   
   const isValidFormat = supportedFormats.some(format => 

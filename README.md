@@ -19,6 +19,7 @@ A production-ready Next.js 14 application with Google authentication, Cloudflare
 - Email processing with 60-second timeout optimization
 - Comprehensive error handling and user feedback
 - Production-ready voice note processing pipeline
+- **Optimized FormData processing** (Simplified from formidable to Next.js native - 100+ lines reduced)
 
 ✅ **Phase 3 - Admin Interface & Production** (Complete)
 - Complete admin dashboard with DataTable
@@ -461,6 +462,13 @@ wrangler d1 execute voice-transcription-prod \
 - **Daily Quota**: Based on Vercel function invocations
 - **Success Rate**: 95%+ for properly formatted files
 - **Error Recovery**: Comprehensive error handling
+
+## 📚 Additional Documentation
+
+For detailed information about specific aspects of the system:
+
+- **[Deployment Guide](docs/DEPLOYMENT.md)** - Complete deployment and configuration instructions
+- **[Webhook Optimization](docs/WEBHOOK_OPTIMIZATION.md)** - FormData simplification and performance improvements
 
 ## 📝 License
 
