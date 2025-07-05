@@ -49,6 +49,68 @@ const EMAIL_TEMPLATES = {
     `
   }),
 
+  adminNotification: (userEmail: string, userSlug: string, userName?: string): EmailTemplate => ({
+    subject: `New User Signup: ${userEmail}`,
+    text: `A new user has signed up for the Voice Note Transcription Service.\n\nEmail: ${userEmail}\nSlug: ${userSlug}\nName: ${userName || 'Not provided'}\n\nPlease review and approve this user in the admin dashboard.`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #2c3e50;">New User Signup</h2>
+        <p>A new user has signed up for the Voice Note Transcription Service.</p>
+        
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3498db;">
+          <p style="margin: 0 0 10px 0;"><strong>Email:</strong> ${userEmail}</p>
+          <p style="margin: 0 0 10px 0;"><strong>Slug:</strong> ${userSlug}</p>
+          <p style="margin: 0;"><strong>Name:</strong> ${userName || 'Not provided'}</p>
+        </div>
+        
+        <p>Please review and approve this user in the admin dashboard.</p>
+        
+        <div style="margin: 20px 0;">
+          <a href="${process.env.NEXTAUTH_URL || 'https://echo.flickerventures.com'}/admin" 
+             style="background: #3498db; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+            Go to Admin Dashboard
+          </a>
+        </div>
+        
+        <p style="color: #666; font-size: 12px;">
+          Voice Note Transcription Service - Admin Notification
+        </p>
+      </div>
+    `
+  }),
+
+  userApprovalStatus: (userEmail: string, isApproved: boolean): EmailTemplate => ({
+    subject: `Account ${isApproved ? 'Approved' : 'Access Revoked'}: Voice Note Transcription Service`,
+    text: `Your account has been ${isApproved ? 'approved' : 'revoked'} for the Voice Note Transcription Service.\n\nEmail: ${userEmail}\nStatus: ${isApproved ? 'Approved' : 'Access Revoked'}\n\n${isApproved ? 'You can now send voice notes to your personal email address. Visit your dashboard to get started.' : 'If you believe this was an error, please contact support.'}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: ${isApproved ? '#27ae60' : '#e74c3c'};">Account ${isApproved ? 'Approved' : 'Access Revoked'}</h2>
+        <p>Your account has been ${isApproved ? 'approved' : 'revoked'} for the Voice Note Transcription Service.</p>
+        
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${isApproved ? '#27ae60' : '#e74c3c'};">
+          <p style="margin: 0 0 10px 0;"><strong>Email:</strong> ${userEmail}</p>
+          <p style="margin: 0;"><strong>Status:</strong> ${isApproved ? 'Approved' : 'Access Revoked'}</p>
+        </div>
+        
+        ${isApproved ? `
+          <p>You can now send voice notes to your personal email address. Visit your dashboard to get started.</p>
+          <div style="margin: 20px 0;">
+            <a href="${process.env.NEXTAUTH_URL || 'https://echo.flickerventures.com'}/dashboard" 
+               style="background: #27ae60; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+              Go to Dashboard
+            </a>
+          </div>
+        ` : `
+          <p>If you believe this was an error, please contact support.</p>
+        `}
+        
+        <p style="color: #666; font-size: 12px;">
+          Voice Note Transcription Service
+        </p>
+      </div>
+    `
+  }),
+
   error: (errorType: TimeoutErrorType, filename?: string): EmailTemplate => {
     const templates = {
       file_too_large: {
@@ -457,4 +519,86 @@ export async function sendErrorEmail(
 ): Promise<boolean> {
   const template = EMAIL_TEMPLATES.error(errorType, filename);
   return sendEmail(to, template, abortSignal);
+}
+
+/**
+ * Send admin notification about new user signup
+ * @param userEmail - New user's email
+ * @param userSlug - New user's slug
+ * @param userName - New user's name (optional)
+ * @param abortSignal - Abort signal for timeout
+ * @returns Promise<boolean> - Success status
+ */
+export async function sendAdminNotification(
+  userEmail: string,
+  userSlug: string,
+  userName?: string,
+  abortSignal?: AbortSignal
+): Promise<boolean> {
+  try {
+    const { getAdminEmails } = await import('@/utils/env');
+    const adminEmails = getAdminEmails();
+    
+    if (adminEmails.length === 0) {
+      console.warn('⚠️ [ADMIN_NOTIFICATION] No admin emails configured');
+      return false;
+    }
+    
+    console.log('📧 [ADMIN_NOTIFICATION] Sending notifications to admins:', {
+      adminEmails,
+      newUser: { email: userEmail, slug: userSlug, name: userName }
+    });
+    
+    const template = EMAIL_TEMPLATES.adminNotification(userEmail, userSlug, userName);
+    
+    // Send to all admin emails
+    const sendPromises = adminEmails.map(adminEmail => 
+      sendEmail(adminEmail, template, abortSignal)
+    );
+    
+    const results = await Promise.allSettled(sendPromises);
+    const successCount = results.filter(result => 
+      result.status === 'fulfilled' && result.value === true
+    ).length;
+    
+    console.log('📧 [ADMIN_NOTIFICATION] Notification results:', {
+      totalAdmins: adminEmails.length,
+      successCount,
+      failedCount: adminEmails.length - successCount
+    });
+    
+    return successCount > 0; // Return true if at least one email was sent successfully
+  } catch (error) {
+    console.error('❌ [ADMIN_NOTIFICATION] Failed to send admin notifications:', error);
+    return false;
+  }
+}
+
+/**
+ * Send user notification about approval status change
+ * @param userEmail - User's email
+ * @param isApproved - Whether user was approved or revoked
+ * @param abortSignal - Abort signal for timeout
+ * @returns Promise<boolean> - Success status
+ */
+export async function sendUserApprovalNotification(
+  userEmail: string,
+  isApproved: boolean,
+  abortSignal?: AbortSignal
+): Promise<boolean> {
+  try {
+    console.log('📧 [USER_APPROVAL] Sending approval notification:', {
+      userEmail,
+      isApproved
+    });
+    
+    const template = EMAIL_TEMPLATES.userApprovalStatus(userEmail, isApproved);
+    const result = await sendEmail(userEmail, template, abortSignal);
+    
+    console.log('📧 [USER_APPROVAL] Notification result:', result);
+    return result;
+  } catch (error) {
+    console.error('❌ [USER_APPROVAL] Failed to send approval notification:', error);
+    return false;
+  }
 } 

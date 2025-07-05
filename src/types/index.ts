@@ -13,6 +13,22 @@ export interface VoiceEvent {
   received_at: string;
   duration_sec: number | null;
   bytes: number | null;
+  status: 'processing' | 'completed' | 'failed';
+  processing_type: 'raw' | 'cleanup' | 'summary' | null;
+  completed_at: string | null;
+  error_message: string | null;
+  enhancements_requested: string | null; // JSON array of enhancement types
+}
+
+export interface UserPreferences {
+  user_id: string;
+  // Legacy field (kept for backward compatibility)
+  transcript_processing?: 'raw' | 'cleanup' | 'summary';
+  // New boolean enhancement flags
+  send_cleaned_transcript: number; // 0 = false, 1 = true (SQLite boolean)
+  send_summary: number; // 0 = false, 1 = true (SQLite boolean)
+  created_at: string;
+  updated_at: string;
 }
 
 // API response types
@@ -59,6 +75,9 @@ export interface CreateVoiceEventData {
   user_id: string;
   duration_sec?: number;
   bytes?: number;
+  status?: 'processing' | 'completed' | 'failed';
+  processing_type?: 'raw' | 'cleanup' | 'summary';
+  enhancements_requested?: string; // JSON array of enhancement types
 }
 
 // Utility types
@@ -91,6 +110,7 @@ export interface EnvConfig {
   MAILGUN_API_KEY: string;
   MAILGUN_EMAIL: string;
   OPENAI_API_KEY: string;
+  AIMLAPI_KEY?: string;
   MAX_FILE_SIZE_MB?: string;
   DOWNLOAD_TIMEOUT_SEC?: string;
   PROCESSING_TIMEOUT_SEC?: string;
@@ -182,6 +202,39 @@ export interface ProcessingContext {
   startTime: number;
   abortController: AbortController;
   timeoutId: any; // Timer ID from setTimeout
+}
+
+// Background processing types
+export interface BackgroundProcessingMetadata {
+  userId: string;
+  userEmail: string;
+  eventId: string;
+  enhancementTypes: EnhancementType[]; // Array of enhancement types to process
+  filename: string;
+  duration?: number;
+  fileSize?: number;
+}
+
+export interface EnhancedEmailData {
+  originalTranscript: string;
+  enhancedContent: string;
+  processingType: EnhancementType;
+  filename: string;
+}
+
+// Helper types for the new system
+export type EnhancementType = 'cleanup' | 'summary' | 'quickSummary';
+
+export interface UserEnhancementPreferences {
+  sendCleanedTranscript: boolean;
+  sendSummary: boolean;
+}
+
+export interface EnhancementProcessingResult {
+  type: EnhancementType;
+  success: boolean;
+  content?: string;
+  error?: string;
 }
 
 export interface ProcessingMetrics {

@@ -1,10 +1,12 @@
 # Voice Note Transcription Service - Complete
 
-A production-ready Next.js 14 application with Google authentication, Cloudflare D1 database, and OpenAI Whisper transcription. Features comprehensive admin dashboard, user management, and real-time voice processing optimized for Vercel Hobby tier deployment.
+A production-ready Next.js 14 application with Google authentication, Cloudflare D1 database, and OpenAI Whisper transcription. Features an innovative "Always Raw + Optional Enhancements" system, user preference management, comprehensive admin dashboard, and real-time voice processing optimized for Vercel Hobby tier deployment.
+
+📋 **[Complete Architecture Documentation](docs/architecture.md)** - Detailed system architecture, component interactions, data flows, and operational considerations.
 
 ## 🎯 Project Status: COMPLETE ✅
 
-**All 3 phases successfully implemented:**
+**All 4 phases successfully implemented:**
 
 ✅ **Phase 1 - Foundation** (Complete)
 - Next.js 14 with App Router and TypeScript
@@ -28,6 +30,14 @@ A production-ready Next.js 14 application with Google authentication, Cloudflare
 - Mobile-responsive design with shadcn/ui
 - Comprehensive error pages and monitoring
 - Full Vercel deployment optimization
+
+✅ **Phase 4 - User Preferences & Smart Routing** (Complete)
+- "Always Raw + Optional Enhancements" processing system
+- User preference management with boolean enhancement flags
+- Background processing with GPT-4o-mini (cleanup & summary)
+- Multi-email delivery system (raw + enhanced versions)
+- RESTful preferences API with authentication
+- Interactive preferences UI with real-time preview
 
 ## 🏗️ Architecture Overview
 
@@ -53,7 +63,10 @@ This setup provides excellent performance, cost efficiency, and leverages each p
 ### Key Features
 - 🔐 **Complete Authentication**: Google OAuth with session management
 - 👥 **User Management**: Admin approval workflow with bulk operations
-- 🎤 **Voice Processing**: Email-to-transcription pipeline (< 60 seconds)
+- 🎤 **Smart Voice Processing**: Always-raw + optional enhancements system
+- ⚙️ **User Preferences**: Interactive preference management for enhancements
+- 🤖 **AI Enhancement**: GPT-4o-mini cleanup and summary processing
+- 📧 **Multi-Email System**: Raw transcript + enhanced versions delivered separately
 - 📊 **Admin Dashboard**: Real-time user analytics and management
 - 👤 **User Dashboard**: Personal voice history and usage instructions
 - 🛡️ **Production Security**: Rate limiting, CSRF, security headers
@@ -70,9 +83,11 @@ src/
 │   ├── api/
 │   │   ├── admin/users/route.ts        # Admin user management API
 │   │   ├── auth/[...nextauth]/route.ts # NextAuth configuration
-│   │   └── inbound/route.ts            # Mailgun webhook handler
+│   │   ├── inbound/route.ts            # Smart webhook handler (always raw + enhancements)
+│   │   └── user/preferences/route.ts   # User preferences API
 │   ├── dashboard/
-│   │   └── page.tsx                    # User dashboard
+│   │   ├── page.tsx                    # User dashboard
+│   │   └── preferences/page.tsx        # User preferences management
 │   ├── error.tsx                       # Global error page
 │   ├── not-found.tsx                   # 404 page
 │   ├── globals.css                     # Global styles
@@ -90,12 +105,13 @@ src/
 ├── lib/
 │   ├── audio.ts                        # Audio processing utilities
 │   ├── auth.ts                         # NextAuth configuration
-│   ├── database.ts                     # Database operations
+│   ├── database.ts                     # Database operations with preferences
 │   ├── errors.ts                       # Error handling system
 │   ├── mailgun.ts                      # Email processing
 │   ├── rate-limit.ts                   # In-memory rate limiting
 │   ├── security.ts                     # Security middleware
 │   ├── utils.ts                        # Utility functions
+│   ├── voice-processor.ts              # Background enhancement processing
 │   └── whisper.ts                      # OpenAI Whisper integration
 ├── types/
 │   └── index.ts                        # TypeScript definitions
@@ -132,14 +148,32 @@ CREATE TABLE users (
 );
 ```
 
+### User Preferences Table
+```sql
+CREATE TABLE user_preferences (
+  user_id                   TEXT PRIMARY KEY,          -- Reference to users.id
+  transcript_processing     TEXT DEFAULT 'raw',        -- Legacy: 'raw', 'cleanup', 'summary'
+  send_cleaned_transcript   INTEGER DEFAULT 0,         -- 0=disabled, 1=enabled
+  send_summary             INTEGER DEFAULT 0,         -- 0=disabled, 1=enabled
+  created_at               DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at               DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(user_id) REFERENCES users(id)
+);
+```
+
 ### Voice Events Table
 ```sql
 CREATE TABLE voice_events (
-  id           TEXT PRIMARY KEY,          -- cuid() identifier
-  user_id      TEXT NOT NULL,             -- Reference to users.id
-  received_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
-  duration_sec INTEGER,                   -- Duration in seconds
-  bytes        INTEGER,                   -- File size in bytes
+  id                    TEXT PRIMARY KEY,          -- cuid() identifier
+  user_id              TEXT NOT NULL,             -- Reference to users.id
+  received_at          DATETIME DEFAULT CURRENT_TIMESTAMP,
+  duration_sec         INTEGER,                   -- Duration in seconds
+  bytes                INTEGER,                   -- File size in bytes
+  status               TEXT DEFAULT 'pending',    -- 'pending', 'processing', 'completed', 'failed'
+  processing_type      TEXT DEFAULT 'raw',        -- 'raw', 'cleanup', 'summary'
+  completed_at         DATETIME,                  -- When processing completed
+  error_message        TEXT,                      -- Error details if failed
+  enhancements_requested TEXT,                    -- JSON array of requested enhancements
   FOREIGN KEY(user_id) REFERENCES users(id)
 );
 ```
@@ -208,12 +242,13 @@ D1_URL=https://api.cloudflare.com/client/v4/accounts/ACCOUNT_ID/d1/database/DATA
 D1_DATABASE_ID=your-database-id
 D1_API_KEY=your-api-key
 
-# OpenAI Whisper
+# OpenAI (Whisper + GPT-4o-mini)
 OPENAI_API_KEY=sk-your-openai-key
 
 # Mailgun
 MAILGUN_DOMAIN=your-domain.com
 MAILGUN_API_KEY=key-your-mailgun-key
+MAILGUN_WEBHOOK_KEY=your-webhook-signing-key
 
 # Admin Users
 ADMIN_EMAILS=admin@yourdomain.com,admin2@yourdomain.com
@@ -237,9 +272,10 @@ vercel --prod
 1. **Sign Up**: Google OAuth authentication
 2. **Approval**: Admin reviews and approves account
 3. **Email Alias**: Receive personal email address (slug@yourdomain.com)
-4. **Voice Notes**: Send audio files via email
-5. **Transcription**: Receive transcripts back via email
-6. **Dashboard**: View history and usage statistics
+4. **Set Preferences**: Configure enhancement options (cleanup, summary, or both)
+5. **Voice Notes**: Send audio files via email
+6. **Multiple Transcripts**: Receive raw transcript immediately + enhanced versions (if enabled)
+7. **Dashboard**: View history, usage statistics, and manage preferences
 
 ### Admin Experience
 1. **Dashboard**: View all users and system statistics
@@ -263,6 +299,14 @@ vercel --prod
 - **Voice History**: Last 20 voice notes with metadata
 - **File Guidelines**: Size limits, format recommendations
 - **Account Status**: Approval status and notifications
+- **Preferences Access**: One-click navigation to enhancement settings
+
+### User Preferences (`/dashboard/preferences`)
+- **Always Raw Processing**: Guaranteed immediate transcript delivery
+- **Optional Cleanup**: Grammar and formatting improvements with GPT-4o-mini
+- **Optional Summary**: Concise key points and action items
+- **Real-time Preview**: See exactly how many emails you'll receive
+- **Interactive Controls**: Toggle enhancements on/off with visual feedback
 
 ### Security Features
 - **Rate Limiting**: In-memory system with per-endpoint limits
@@ -280,11 +324,12 @@ vercel --prod
 
 ## 🎤 Voice Processing Pipeline
 
-### Complete Processing Flow
+### Complete Processing Flow (Always Raw + Optional Enhancements)
 ```
-Email Received → Webhook Validation → User Lookup → 
-File Validation → Audio Download → Whisper Transcription → 
-Database Logging → Email Response → Error Handling
+Email Received → Webhook Validation → User Lookup → Get Preferences →
+File Validation → Audio Download → Whisper Transcription (Raw) → 
+Database Logging → Raw Email Response → Queue Enhancements (if enabled) →
+Background Processing → GPT-4o-mini Enhancement → Enhanced Email Response
 ```
 
 ### Timeout Management (< 60 seconds)
@@ -436,11 +481,28 @@ wrangler d1 execute voice-transcription-prod \
 ## 🔄 Usage Instructions
 
 ### For End Users
+📖 **Complete Guide**: See the **[User Manual](docs/USER_MANUAL.md)** for detailed instructions
+
 1. **Get Access**: Sign up and wait for admin approval
 2. **Receive Email**: Get your personal alias (abc123@yourdomain.com)
-3. **Send Voice Notes**: Attach audio files to emails
-4. **Receive Transcripts**: Get transcriptions back via email
-5. **View History**: Check dashboard for past voice notes
+3. **Set Preferences**: Configure enhancement options (/dashboard/preferences)
+4. **Send Voice Notes**: Attach audio files to emails
+5. **Receive Multiple Transcripts**: Get raw transcript immediately + enhanced versions
+6. **View History**: Check dashboard for past voice notes
+
+### "Always Raw + Optional Enhancements" System
+
+**How It Works:**
+- **Raw Transcript** (Always): Delivered in 15-30 seconds, exactly as transcribed
+- **Cleaned Transcript** (Optional): Grammar and formatting improvements via GPT-4o-mini
+- **Summary** (Optional): Key points and action items extracted by AI
+- **Multiple Emails**: Each version arrives in a separate, clearly labeled email
+
+**User Benefits:**
+- **Immediate Access**: Never wait for enhancements - raw transcript arrives first
+- **Flexible Options**: Enable cleanup, summary, both, or neither
+- **Clear Labeling**: Email subjects clearly indicate which version you're reading
+- **No Delays**: Enhanced processing happens in background without affecting speed
 
 ### For Administrators
 1. **Access Dashboard**: Navigate to `/admin` with admin account
@@ -467,6 +529,7 @@ wrangler d1 execute voice-transcription-prod \
 
 For detailed information about specific aspects of the system:
 
+- **[User Manual](docs/USER_MANUAL.md)** - Complete end-user guide for signup, workflow, and usage
 - **[Deployment Guide](docs/DEPLOYMENT.md)** - Complete deployment and configuration instructions
 - **[Webhook Optimization](docs/WEBHOOK_OPTIMIZATION.md)** - FormData simplification and performance improvements
 

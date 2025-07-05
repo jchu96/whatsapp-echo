@@ -3,6 +3,7 @@ import GoogleProvider from 'next-auth/providers/google';
 import { AppSession } from '@/types';
 import { getUserByEmail, createUser, generateUniqueSlug } from '@/lib/database';
 import { getEnvConfig, isAdminEmail } from '@/utils/env';
+import { sendAdminNotification } from '@/lib/mailgun';
 
 const config = getEnvConfig();
 
@@ -77,6 +78,22 @@ export const authOptions: NextAuthOptions = {
           }
 
           console.log('✅ [AUTH] User created successfully');
+          
+          // Send admin notification for new user signup (only for non-admin users)
+          if (!isAdmin) {
+            console.log('📧 [AUTH] Sending admin notification for new user');
+            try {
+              const notificationSent = await sendAdminNotification(
+                user.email,
+                slug,
+                user.name || undefined
+              );
+              console.log('📧 [AUTH] Admin notification result:', notificationSent);
+            } catch (error) {
+              console.error('❌ [AUTH] Failed to send admin notification:', error);
+              // Don't fail the sign-in if notification fails
+            }
+          }
         } else {
           console.log('✅ [AUTH] Existing user found');
         }

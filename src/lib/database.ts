@@ -1,12 +1,15 @@
 import { 
   User, 
   VoiceEvent, 
+  UserPreferences,
   CreateUserData, 
   CreateVoiceEventData, 
   DbResponse, 
   D1QueryResult,
   PaginatedResponse,
-  UserWithStats
+  UserWithStats,
+  UserEnhancementPreferences,
+  EnhancementType
 } from '@/types';
 import { generateUserId, generateVoiceEventId, generateEmailSlug } from '@/utils/id';
 import { getEnvConfig } from '@/utils/env';
@@ -284,8 +287,16 @@ export async function insertVoiceEvent(
     const id = generateVoiceEventId();
 
     const result = await executeQuery(
-      'INSERT INTO voice_events (id, user_id, duration_sec, bytes) VALUES (?, ?, ?, ?)',
-      [id, eventData.user_id, eventData.duration_sec || null, eventData.bytes || null]
+      'INSERT INTO voice_events (id, user_id, duration_sec, bytes, status, processing_type, enhancements_requested) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [
+        id, 
+        eventData.user_id, 
+        eventData.duration_sec || null, 
+        eventData.bytes || null,
+        eventData.status || 'processing',
+        eventData.processing_type || null,
+        eventData.enhancements_requested || null
+      ]
     );
 
     if (!result.success) {
@@ -299,6 +310,11 @@ export async function insertVoiceEvent(
       received_at: new Date().toISOString(),
       duration_sec: eventData.duration_sec || null,
       bytes: eventData.bytes || null,
+      status: eventData.status || 'processing',
+      processing_type: eventData.processing_type || null,
+      completed_at: null,
+      error_message: null,
+      enhancements_requested: eventData.enhancements_requested || null,
     };
 
     return { success: true, data: voiceEvent };
@@ -491,4 +507,384 @@ export async function generateUniqueSlug(): Promise<string> {
 
   console.error('🚨 [AUTH] Failed to generate unique slug after maximum attempts');
   throw new Error('Failed to generate unique slug after maximum attempts');
+}
+
+/**
+ * Get user preferences by user ID
+ * @param userId - User ID
+ * @returns Promise<DbResponse<UserPreferences>> - User preferences or error
+ */
+export async function getUserPreferences(userId: string): Promise<DbResponse<UserPreferences>> {
+  try {
+    console.log('🔍 [PREFS] Getting user preferences for:', userId);
+    
+    const result = await executeQuery<UserPreferences>(
+      'SELECT * FROM user_preferences WHERE user_id = ? LIMIT 1',
+      [userId]
+    );
+
+    if (!result.success) {
+      return { success: false, error: result.error };
+    }
+
+    const preferences = result.results?.[0];
+    if (!preferences) {
+      return { success: false, error: 'User preferences not found' };
+    }
+
+    return { success: true, data: preferences };
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to get user preferences' 
+    };
+  }
+}
+
+/**
+ * Create user preferences
+ * @param userId - User ID
+ * @param preferences - Partial preferences data
+ * @returns Promise<DbResponse<UserPreferences>> - Created preferences or error
+ */
+export async function createUserPreferences(
+  userId: string, 
+  preferences: Partial<UserPreferences> = {}
+): Promise<DbResponse<UserPreferences>> {
+  try {
+    console.log('🔍 [PREFS] Creating user preferences:', { userId, preferences });
+    
+    const result = await executeQuery(
+      'INSERT INTO user_preferences (user_id, transcript_processing, send_cleaned_transcript, send_summary, created_at, updated_at) VALUES (?, ?, ?, ?, datetime("now"), datetime("now"))',
+      [
+        userId, 
+        preferences.transcript_processing || 'raw',
+        preferences.send_cleaned_transcript ?? 0,
+        preferences.send_summary ?? 0
+      ]
+    );
+
+    if (!result.success) {
+      return { success: false, error: result.error };
+    }
+
+    // Return the created preferences
+    const userPreferences: UserPreferences = {
+      user_id: userId,
+      transcript_processing: preferences.transcript_processing || 'raw',
+      send_cleaned_transcript: preferences.send_cleaned_transcript ?? 0,
+      send_summary: preferences.send_summary ?? 0,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    return { success: true, data: userPreferences };
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to create user preferences' 
+    };
+  }
+}
+
+/**
+ * Update user preferences
+ * @param userId - User ID
+ * @param updates - Partial updates to preferences
+ * @returns Promise<DbResponse<UserPreferences>> - Updated preferences or error
+ */
+export async function updateUserPreferences(
+  userId: string, 
+  updates: Partial<Pick<UserPreferences, 'transcript_processing' | 'send_cleaned_transcript' | 'send_summary'>>
+): Promise<DbResponse<UserPreferences>> {
+  try {
+    console.log('🔍 [PREFS] Updating user preferences:', { userId, updates });
+    
+    const updateFields = [];
+    const values = [];
+    
+    if (updates.transcript_processing !== undefined) {
+      updateFields.push('transcript_processing = ?');
+      values.push(updates.transcript_processing);
+    }
+    
+    if (updates.send_cleaned_transcript !== undefined) {
+      updateFields.push('send_cleaned_transcript = ?');
+      values.push(updates.send_cleaned_transcript);
+    }
+    
+    if (updates.send_summary !== undefined) {
+      updateFields.push('send_summary = ?');
+      values.push(updates.send_summary);
+    }
+    
+    if (updateFields.length === 0) {
+      return { success: false, error: 'No updates provided' };
+    }
+    
+    updateFields.push('updated_at = datetime("now")');
+    values.push(userId);
+    
+    const result = await executeQuery(
+      `UPDATE user_preferences SET ${updateFields.join(', ')} WHERE user_id = ?`,
+      values
+    );
+
+    if (!result.success) {
+      return { success: false, error: result.error };
+    }
+
+    // Get the updated preferences
+    const updatedPrefs = await getUserPreferences(userId);
+    return updatedPrefs;
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to update user preferences' 
+    };
+  }
+}
+
+/**
+ * Ensure user has preferences (create if missing)
+ * @param userId - User ID
+ * @returns Promise<DbResponse<UserPreferences>> - User preferences
+ */
+export async function ensureUserPreferences(userId: string): Promise<DbResponse<UserPreferences>> {
+  try {
+    console.log('🔍 [PREFS] Ensuring user preferences exist for:', userId);
+    
+    let preferences = await getUserPreferences(userId);
+    
+    if (!preferences.success) {
+      // Create default preferences if they don't exist
+      console.log('🔍 [PREFS] Creating default preferences for user:', userId);
+      preferences = await createUserPreferences(userId);
+    }
+    
+    return preferences;
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to ensure user preferences' 
+    };
+  }
+}
+
+/**
+ * Update voice event status and metadata
+ * @param eventId - Voice event ID
+ * @param updates - Partial updates to voice event
+ * @returns Promise<DbResponse<VoiceEvent>> - Updated voice event or error
+ */
+export async function updateVoiceEvent(
+  eventId: string, 
+  updates: Partial<{
+    status: 'processing' | 'completed' | 'failed';
+    completed_at: Date;
+    error_message: string;
+  }>
+): Promise<DbResponse<VoiceEvent>> {
+  try {
+    console.log('🔍 [DB] Updating voice event:', { eventId, updates });
+    
+    const updateFields = [];
+    const values = [];
+    
+    if (updates.status) {
+      updateFields.push('status = ?');
+      values.push(updates.status);
+    }
+    
+    if (updates.completed_at) {
+      updateFields.push('completed_at = ?');
+      values.push(updates.completed_at.toISOString());
+    }
+    
+    if (updates.error_message) {
+      updateFields.push('error_message = ?');
+      values.push(updates.error_message);
+    }
+    
+    if (updateFields.length === 0) {
+      return { success: false, error: 'No updates provided' };
+    }
+    
+    values.push(eventId);
+    
+    const result = await executeQuery(
+      `UPDATE voice_events SET ${updateFields.join(', ')} WHERE id = ?`,
+      values
+    );
+    
+    if (!result.success) {
+      return { success: false, error: result.error };
+    }
+
+    // Get the updated voice event
+    const updatedEvent = await executeQuery<VoiceEvent>(
+      'SELECT * FROM voice_events WHERE id = ? LIMIT 1',
+      [eventId]
+    );
+
+    if (!updatedEvent.success || !updatedEvent.results?.[0]) {
+      return { success: false, error: 'Failed to retrieve updated voice event' };
+    }
+
+    return { success: true, data: updatedEvent.results[0] };
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to update voice event' 
+    };
+  }
+}
+
+/**
+ * Insert a voice event and return the event ID
+ * @param eventData - Voice event data
+ * @returns Promise<string> - Event ID or throws error
+ */
+export async function insertVoiceEventAndGetId(
+  eventData: CreateVoiceEventData
+): Promise<string> {
+  const result = await insertVoiceEvent(eventData);
+  
+  if (!result.success) {
+    throw new Error(result.error || 'Failed to insert voice event');
+  }
+  
+  return result.data!.id;
+}
+
+/**
+ * Convert SQLite boolean integers to JavaScript booleans
+ * @param preferences - Raw preferences from database
+ * @returns User preferences with proper boolean conversion
+ */
+export function convertUserPreferences(preferences: UserPreferences): UserEnhancementPreferences {
+  return {
+    sendCleanedTranscript: Boolean(preferences.send_cleaned_transcript),
+    sendSummary: Boolean(preferences.send_summary)
+  };
+}
+
+/**
+ * Get user enhancement preferences in a usable format
+ * @param userId - User ID
+ * @returns Promise<DbResponse<UserEnhancementPreferences>> - Converted preferences or error
+ */
+export async function getUserEnhancementPreferences(userId: string): Promise<DbResponse<UserEnhancementPreferences>> {
+  try {
+    const prefsResult = await getUserPreferences(userId);
+    
+    if (!prefsResult.success || !prefsResult.data) {
+      return { success: false, error: prefsResult.error };
+    }
+    
+    const enhancementPrefs = convertUserPreferences(prefsResult.data);
+    
+    return { success: true, data: enhancementPrefs };
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to get enhancement preferences' 
+    };
+  }
+}
+
+/**
+ * Update user enhancement preferences
+ * @param userId - User ID
+ * @param preferences - Enhancement preferences to update
+ * @returns Promise<DbResponse<UserPreferences>> - Updated preferences or error
+ */
+export async function updateUserEnhancementPreferences(
+  userId: string,
+  preferences: Partial<UserEnhancementPreferences>
+): Promise<DbResponse<UserPreferences>> {
+  try {
+    const updates: Partial<Pick<UserPreferences, 'send_cleaned_transcript' | 'send_summary'>> = {};
+    
+    if (preferences.sendCleanedTranscript !== undefined) {
+      updates.send_cleaned_transcript = preferences.sendCleanedTranscript ? 1 : 0;
+    }
+    
+    if (preferences.sendSummary !== undefined) {
+      updates.send_summary = preferences.sendSummary ? 1 : 0;
+    }
+    
+    return await updateUserPreferences(userId, updates);
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to update enhancement preferences' 
+    };
+  }
+}
+
+/**
+ * Get the list of enhancement types that should be processed for a user
+ * @param userId - User ID
+ * @returns Promise<EnhancementType[]> - Array of enhancement types to process
+ */
+export async function getUserRequestedEnhancements(userId: string): Promise<EnhancementType[]> {
+  try {
+    const prefsResult = await getUserEnhancementPreferences(userId);
+    
+    if (!prefsResult.success || !prefsResult.data) {
+      console.warn('🔍 [PREFS] Could not get enhancement preferences, returning empty array');
+      return [];
+    }
+    
+    const enhancements: EnhancementType[] = [];
+    
+    if (prefsResult.data.sendCleanedTranscript) {
+      enhancements.push('cleanup');
+    }
+    
+    if (prefsResult.data.sendSummary) {
+      enhancements.push('summary');
+    }
+    
+    console.log('🔍 [PREFS] User enhancement preferences:', {
+      userId,
+      sendCleanedTranscript: prefsResult.data.sendCleanedTranscript,
+      sendSummary: prefsResult.data.sendSummary,
+      enhancementsToProcess: enhancements
+    });
+    
+    return enhancements;
+  } catch (error) {
+    console.error('🚨 [PREFS] Error getting user enhancements:', error);
+    return [];
+  }
+}
+
+/**
+ * Create JSON string of enhancement types for database storage
+ * @param enhancements - Array of enhancement types
+ * @returns JSON string for database storage
+ */
+export function serializeEnhancements(enhancements: EnhancementType[]): string {
+  return JSON.stringify(enhancements);
+}
+
+/**
+ * Parse JSON string of enhancement types from database
+ * @param enhancementsJson - JSON string from database
+ * @returns Array of enhancement types
+ */
+export function deserializeEnhancements(enhancementsJson: string | null): EnhancementType[] {
+  if (!enhancementsJson) {
+    return [];
+  }
+  
+  try {
+    const parsed = JSON.parse(enhancementsJson);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    console.error('🚨 [DB] Error parsing enhancements JSON:', error);
+    return [];
+  }
 } 

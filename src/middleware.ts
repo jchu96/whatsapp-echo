@@ -99,6 +99,7 @@ export async function middleware(request: NextRequest) {
       '/dashboard',
       '/profile',
       '/api/voice',
+      '/api/user',  // User-specific API routes like preferences
     ];
 
     const requiresApproval = approvalRequiredRoutes.some(route => 
@@ -160,8 +161,9 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     * - images (public images)
      * - public folder
      */
-    '/((?!_next/static|_next/image|favicon.ico|public).*)',
+    '/((?!_next/static|_next/image|favicon.ico|images|public).*)',
   ],
 }; 

@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions, isSessionAdmin } from '@/lib/auth';
 import { getUsersWithStats, toggleUserApproval } from '@/lib/database';
+import { sendUserApprovalNotification } from '@/lib/mailgun';
 
 // Vercel configuration
 export const runtime = 'nodejs';
@@ -75,6 +76,26 @@ export async function POST(request: NextRequest) {
         
         if (!result.success) {
           return NextResponse.json({ error: result.error }, { status: 500 });
+        }
+        
+        // Send notification to user about approval status change
+        if (result.data) {
+          try {
+            const isApproved = Boolean(result.data.approved);
+            console.log('📧 [ADMIN] Sending approval notification to user:', {
+              userId,
+              userEmail: result.data.google_email,
+              isApproved
+            });
+            
+            await sendUserApprovalNotification(
+              result.data.google_email,
+              isApproved
+            );
+          } catch (error) {
+            console.error('❌ [ADMIN] Failed to send approval notification:', error);
+            // Don't fail the request if notification fails
+          }
         }
         
         return NextResponse.json({ 

@@ -4,8 +4,11 @@ import { getVoiceEventsByUser } from '@/lib/database';
 import { redirect } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { formatDate, formatBytes, formatDuration } from '@/lib/utils';
 import { getMailgunConfig } from '@/utils/env';
+import { SignOutButton } from '@/components/auth/signout-button';
+import Link from 'next/link';
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
@@ -32,11 +35,21 @@ export default async function DashboardPage() {
   return (
     <div className="container mx-auto py-8 space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Welcome back, {safeUser!.email}
-        </p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold">Dashboard</h1>
+          <p className="text-muted-foreground">
+            Welcome back, {safeUser!.email}
+          </p>
+        </div>
+        <div className="flex items-center space-x-4">
+          <Link href="/dashboard/preferences">
+            <Button variant="outline">
+              ⚙️ Preferences
+            </Button>
+          </Link>
+          <SignOutButton />
+        </div>
       </div>
 
       {/* Status and Email Alias */}
@@ -84,31 +97,38 @@ export default async function DashboardPage() {
       <Card>
         <CardHeader>
           <CardTitle>
-            How to Send Voice Notes
+            How to Transcribe WhatsApp Voice Notes
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-4">
               <div className="text-center p-4 border rounded-lg">
                 <div className="text-2xl mb-2">📱</div>
-                <h3 className="font-semibold mb-2">Record</h3>
+                <h3 className="font-semibold mb-2">Receive</h3>
                 <p className="text-sm text-muted-foreground">
-                  Record voice note on your phone or computer
+                  Get a voice note in WhatsApp
+                </p>
+              </div>
+              <div className="text-center p-4 border rounded-lg">
+                <div className="text-2xl mb-2">⬆️</div>
+                <h3 className="font-semibold mb-2">Select & Forward</h3>
+                <p className="text-sm text-muted-foreground">
+                  Tap the voice note, then forward
                 </p>
               </div>
               <div className="text-center p-4 border rounded-lg">
                 <div className="text-2xl mb-2">📧</div>
                 <h3 className="font-semibold mb-2">Email</h3>
                 <p className="text-sm text-muted-foreground">
-                  Attach file and send to your alias
+                  Choose your email app and send to your alias above
                 </p>
               </div>
               <div className="text-center p-4 border rounded-lg">
                 <div className="text-2xl mb-2">📝</div>
-                <h3 className="font-semibold mb-2">Receive</h3>
+                <h3 className="font-semibold mb-2">Get Transcript</h3>
                 <p className="text-sm text-muted-foreground">
-                  Get transcript back via email
+                  Receive transcript by email to your personal inbox
                 </p>
               </div>
             </div>
@@ -118,10 +138,21 @@ export default async function DashboardPage() {
               <h4 className="font-semibold mb-2 text-blue-900">Guidelines for Best Results:</h4>
               <ul className="text-sm text-blue-800 space-y-1">
                 <li>• File size: Under 10MB (15MB max)</li>
-                <li>• Duration: Under 5 minutes for optimal speed</li>
-                <li>• Formats: .m4a, .mp3, .wav, .ogg</li>
-                <li>• Quality: Clear audio with minimal background noise</li>
+                <li>• Duration: Under 25 minutes for optimal processing</li>
+                <li>• Formats: .m4a (WhatsApp standard), .mp3, .wav, .ogg</li>
+                <li>• Quality: Original audio quality from WhatsApp</li>
                 <li>• Language: English for best accuracy</li>
+              </ul>
+            </div>
+
+            {/* WhatsApp Specific Tips */}
+            <div className="bg-green-50 p-4 rounded-lg">
+              <h4 className="font-semibold mb-2 text-green-900">💡 WhatsApp Tips:</h4>
+              <ul className="text-sm text-green-800 space-y-1">
+                <li>• WhatsApp exports voice notes as .m4a files when shared via email</li>
+                <li>• Long voice notes may take a few minutes to process</li>
+                <li>• Multiple voice notes? Send them in separate emails for faster processing</li>
+                <li>• No need to download first - forward directly from WhatsApp</li>
               </ul>
             </div>
           </div>

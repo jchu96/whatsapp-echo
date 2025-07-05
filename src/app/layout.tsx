@@ -22,8 +22,11 @@ export function generateMetadata(): Metadata {
   };
 
   return {
-    title: 'Voice Note Transcription Service',
-    description: 'A Next.js 14 application for voice note transcription with Google authentication and Cloudflare D1 database integration.',
+    title: 'Echo Scribe - Free your voice notes—fast, private, copy-ready text',
+    description: 'Transform WhatsApp voice notes into copy-paste text. Email your audio and get AI-ready transcripts back instantly. Private, fast, and no apps required.',
+    icons: {
+      icon: '/favicon.ico',
+    },
     other: {
       ...getSentryTraceData()
     }
@@ -38,8 +41,17 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <div className="min-h-screen bg-background">
-          {children}
+        <div className="min-h-screen bg-background flex flex-col">
+          <div className="flex-1">
+            {children}
+          </div>
+          <footer className="border-t bg-background">
+            <div className="container mx-auto px-4 py-3">
+              <div className="text-center text-xs text-muted-foreground">
+                Voice Note Transcription Service v1.0.0 • July 2025
+              </div>
+            </div>
+          </footer>
         </div>
       </body>
     </html>

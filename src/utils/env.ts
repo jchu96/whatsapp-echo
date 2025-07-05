@@ -26,9 +26,13 @@ export function validateEnvConfig(): void {
       'MAILGUN_DOMAIN',
       'MAILGUN_API_KEY',
       'MAILGUN_EMAIL',
-      'MAILGUN_WEBHOOK_SIGNING_KEY',
-      'OPENAI_API_KEY'
+      'MAILGUN_WEBHOOK_SIGNING_KEY'
     );
+    
+    // Require either AI/ML API key or OpenAI API key
+    if (!process.env.AIMLAPI_KEY && !process.env.OPENAI_API_KEY) {
+      requiredEnvVars.push('AIMLAPI_KEY');
+    }
   }
 
   const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
@@ -70,6 +74,7 @@ export function getEnvConfig(): EnvConfig {
     MAILGUN_API_KEY: process.env.MAILGUN_API_KEY || 'key-dev-key',
     MAILGUN_EMAIL: process.env.MAILGUN_EMAIL || 'noreply@example.com',
     OPENAI_API_KEY: process.env.OPENAI_API_KEY || 'sk-dev-key',
+    AIMLAPI_KEY: process.env.AIMLAPI_KEY,
     MAX_FILE_SIZE_MB: process.env.MAX_FILE_SIZE_MB,
     DOWNLOAD_TIMEOUT_SEC: process.env.DOWNLOAD_TIMEOUT_SEC,
     PROCESSING_TIMEOUT_SEC: process.env.PROCESSING_TIMEOUT_SEC,
@@ -167,12 +172,12 @@ export function getMailgunConfig() {
 }
 
 /**
- * Get OpenAI configuration
+ * Get OpenAI configuration for AI/ML API
  * @returns OpenAI config object
  */
 export function getOpenAIConfig() {
   return {
-    apiKey: process.env.OPENAI_API_KEY || 'sk-dev-key',
-    apiUrl: 'https://api.openai.com/v1',
+    apiKey: process.env.AIMLAPI_KEY || process.env.OPENAI_API_KEY || 'sk-dev-key',
+    apiUrl: 'https://api.aimlapi.com/v1',
   };
 } 

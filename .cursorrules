@@ -1,1 +1,12 @@
 Never modify, edit, or suggest changes to .env.local files. These files contain sensitive environment variables and should not be altered by AI assistance.
+
+Never use && to chain commands in terminal/shell commands. Instead, suggest running commands separately or provide Windows-compatible alternatives.
+
+For Windows environments:
+- Use separate command lines instead of &&
+- Use Windows batch syntax when appropriate
+- Suggest PowerShell alternatives when needed
+
+Example: Instead of "cd /path && npm run dev", suggest:
+cd /path
+npm run dev
