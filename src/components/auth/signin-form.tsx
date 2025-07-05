@@ -1,6 +1,5 @@
 'use client';
 
-// @ts-ignore
 import { signIn } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';

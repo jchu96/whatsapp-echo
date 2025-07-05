@@ -1,4 +1,3 @@
-// @ts-ignore
 import React from "react"
 import { cn } from "@/lib/utils"
 
@@ -58,7 +57,6 @@ export function Button({
   }
   
   return (
-    // @ts-ignore
     <button
       type={type}
       className={combinedClassName}
@@ -66,9 +64,7 @@ export function Button({
       disabled={disabled}
       {...props}
     >
-      {/* @ts-ignore */}
       {children}
-    {/* @ts-ignore */}
     </button>
   )
 } 

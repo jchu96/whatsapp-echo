@@ -1,9 +1,6 @@
-// @ts-ignore
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-// @ts-ignore
 import { redirect } from 'next/navigation';
-// @ts-ignore
 import { getProviders } from 'next-auth/react';
 import { SignInForm } from '@/components/auth/signin-form';
 

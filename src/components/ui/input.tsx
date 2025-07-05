@@ -1,14 +1,13 @@
-// @ts-ignore
 import React from "react"
 import { cn } from "@/lib/utils"
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   className?: string
+  type?: string
 }
 
 export function Input({ className, type = "text", ...props }: InputProps) {
   return (
-    // @ts-ignore
     <input
       type={type}
       className={cn(
