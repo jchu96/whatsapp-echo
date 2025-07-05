@@ -169,6 +169,7 @@ test-audio.*
 
 # Cloudflare Wrangler
 .wrangler/
+wrangler.toml
 
 # Testing
 /coverage
@@ -181,3 +182,4 @@ test-audio.*
 .env.sentry-build-plugin
 
 .env*.local
+
