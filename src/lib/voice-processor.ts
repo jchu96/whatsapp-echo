@@ -4,6 +4,7 @@ import { sendEnhancedEmail as sendEnhancedEmailFromMailgun } from '@/lib/mailgun
 import { updateVoiceEvent } from '@/lib/database';
 import { BackgroundProcessingMetadata, EnhancedEmailData, EnhancementType, EnhancementProcessingResult } from '@/types';
 import { fastTranscribeAudio, cleanTranscription } from '@/lib/whisper';
+import { markdownToHtml } from '@/lib/markdown';
 
 
 
@@ -42,20 +43,34 @@ TASK
 Read the transcript between <TRANSCRIPT> … </TRANSCRIPT> and return a concise Markdown
 summary using **only** the sections that apply.
 
-### Main Topic  *(always include — one sentence)*
+EXACT FORMAT REQUIRED:
 
-### Key Points  *(include if ≥ 2 important ideas)*
-- Bullet points in the order mentioned
+### Main Topic
+[One sentence describing what this voice note is about]
 
-### Action Items  *(include if specific tasks/todos are stated)*
-- **Task + context (+ timeline if given)**
+### Key Points
+- [First important idea]
+- [Second important idea]
+- [Additional points as needed]
 
-### Important Details  *(include if names / dates / numbers / decisions appear)*
-- Quote each item exactly as spoken
+### Action Items
+- [Task description with context]
+- [Another task if mentioned]
+
+### Important Details
+- [Quote exact names/dates/numbers]
+- [Other specific details]
+
+CRITICAL FORMATTING RULES:
+1. Each ### heading MUST be on its own line
+2. Leave a blank line after each heading before content
+3. Each bullet point starts with "- " on a new line
+4. NEVER put content on the same line as a heading
+5. Only include sections that have actual content
 
 CONSTRAINTS
 -----------
-• ≤ 150 words total  
+• ≤ 200 words total  
 • Omit any empty heading entirely  
 • Do **not** add information that is missing from the transcript.
 
@@ -68,7 +83,7 @@ OUTPUT
 ------
 Return **only** the Markdown summary — no tags, no preamble.`,
     temperature: 0.3,
-    maxTokens: 512
+    maxTokens: 2048
   },
 
   quickSummary: {
@@ -76,16 +91,29 @@ Return **only** the Markdown summary — no tags, no preamble.`,
 
 TASK
 ----
-Create a brief summary in 2-3 sentences maximum from the transcript between <TRANSCRIPT> … </TRANSCRIPT>.
+Create a brief summary from the transcript between <TRANSCRIPT> … </TRANSCRIPT>.
 
-FORMAT:
-**Topic:** [What this voice note is about]
-**Key Point:** [Most important takeaway]
-**Action:** [Only if there's a clear todo/task mentioned]
+EXACT FORMAT REQUIRED:
+
+### Topic
+[What this voice note is about - one sentence]
+
+### Key Point
+[Most important takeaway - one to two sentences]
+
+### Action
+[Only if there's a clear todo/task mentioned]
+
+CRITICAL FORMATTING RULES:
+1. Each ### heading MUST be on its own line
+2. Leave a blank line after each heading before content
+3. NEVER put content on the same line as a heading
+4. Only include "Action" section if there's a clear todo/task
+5. Skip empty sections entirely
 
 CONSTRAINTS
 -----------
-• ≤ 75 words total
+• ≤ 125 words total
 • Skip "Action" section if no clear action items
 • Quote important specifics (names/dates/numbers) exactly
 
@@ -97,17 +125,18 @@ OUTPUT
 ------
 Return **only** the formatted summary — no tags, no preamble.`,
     temperature: 0.25,
-    maxTokens: 128
+    maxTokens: 500
   }
 } as const;
 
 /**
- * Enhance transcript using LLM based on processing type
+ * Enhance transcript using LLM based on processing type with retry logic
  * @param transcript - Original transcript
  * @param processingType - Type of enhancement
+ * @param maxRetries - Maximum number of retry attempts
  * @returns Enhanced transcript
  */
-async function enhanceTranscript(transcript: string, processingType: EnhancementType): Promise<string> {
+async function enhanceTranscript(transcript: string, processingType: EnhancementType, maxRetries: number = 3): Promise<string> {
   const config = getOpenAIConfig();
   const prompt = prompts[processingType];
   
@@ -116,90 +145,196 @@ async function enhanceTranscript(transcript: string, processingType: Enhancement
     throw new Error('OPENAI_API_KEY is not configured');
   }
   
-  try {
-    console.log(`🤖 [BACKGROUND] Calling OpenAI for ${processingType} enhancement...`);
-    console.log(`🤖 [BACKGROUND] OpenAI config:`, {
-      hasApiKey: true,
-      apiKeyPrefix: config.apiKey.substring(0, 10) + '...',
-      apiUrl: config.apiUrl,
-      transcriptLength: transcript.length
-    });
-    
-    const openai = new OpenAI({
-      apiKey: config.apiKey,
-      baseURL: config.apiUrl,
-    });
+  let lastError: Error | null = null;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`🤖 [BACKGROUND] Calling OpenAI for ${processingType} enhancement (attempt ${attempt}/${maxRetries})...`);
+      console.log(`🤖 [BACKGROUND] OpenAI config:`, {
+        hasApiKey: true,
+        apiKeyPrefix: config.apiKey.substring(0, 10) + '...',
+        apiUrl: config.apiUrl,
+        transcriptLength: transcript.length
+      });
+      
+      const openai = new OpenAI({
+        apiKey: config.apiKey,
+        baseURL: config.apiUrl,
+      });
 
-    console.log(`🤖 [BACKGROUND] Making OpenAI API request for ${processingType}...`);
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4.1-nano',
-      messages: [
-        { role: 'system', content: prompt.system },
-        { role: 'user', content: `<TRANSCRIPT>\n${transcript}\n</TRANSCRIPT>` }
-      ],
-      temperature: prompt.temperature,
-      top_p: 1,
-      max_tokens: prompt.maxTokens
-    });
+      console.log(`🤖 [BACKGROUND] Making OpenAI API request for ${processingType}...`);
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4.1-nano',
+        messages: [
+          { role: 'system', content: prompt.system },
+          { role: 'user', content: `<TRANSCRIPT>\n${transcript}\n</TRANSCRIPT>` }
+        ],
+        temperature: prompt.temperature,
+        top_p: 1,
+        max_tokens: prompt.maxTokens
+      });
 
-    console.log(`🤖 [BACKGROUND] OpenAI API response received for ${processingType}:`, {
-      hasResponse: !!response,
-      hasChoices: !!response.choices,
-      choicesLength: response.choices?.length || 0,
-      hasContent: !!response.choices?.[0]?.message?.content
-    });
+      console.log(`🤖 [BACKGROUND] OpenAI API response received for ${processingType}:`, {
+        hasResponse: !!response,
+        hasChoices: !!response.choices,
+        choicesLength: response.choices?.length || 0,
+        hasContent: !!response.choices?.[0]?.message?.content,
+        attempt: attempt
+      });
 
-    let enhancedText = response.choices[0].message.content;
-    
-    if (!enhancedText) {
-      console.error(`❌ [BACKGROUND] Empty response from LLM for ${processingType}`);
-      throw new Error('Empty response from LLM');
-    }
-
-    // Fail-safe truncation for summaries (optional paranoia check)
-    if (processingType === 'summary') {
-      const words = enhancedText.split(/\s+/);
-      if (words.length > 160) {
-        enhancedText = words.slice(0, 160).join(' ') + '...';
-        console.log('🛡️ Applied fail-safe truncation to summary');
+      let enhancedText = response.choices[0].message.content;
+      
+      if (!enhancedText) {
+        throw new Error('Empty response from LLM');
       }
-    } else if (processingType === 'quickSummary') {
-      const words = enhancedText.split(/\s+/);
-      if (words.length > 80) {
-        enhancedText = words.slice(0, 80).join(' ') + '...';
-        console.log('🛡️ Applied fail-safe truncation to quick summary');
+
+      // Fail-safe truncation for summaries (optional paranoia check)
+      if (processingType === 'summary') {
+        const words = enhancedText.split(/\s+/);
+        if (words.length > 160) {
+          enhancedText = words.slice(0, 160).join(' ') + '...';
+          console.log('🛡️ Applied fail-safe truncation to summary');
+        }
+      } else if (processingType === 'quickSummary') {
+        const words = enhancedText.split(/\s+/);
+        if (words.length > 130) {
+          enhancedText = words.slice(0, 130).join(' ') + '...';
+          console.log('🛡️ Applied fail-safe truncation to quick summary');
+        }
       }
+
+      // Convert markdown to HTML for summary types
+      if (processingType === 'summary' || processingType === 'quickSummary') {
+        console.log(`🔄 [BACKGROUND] Converting markdown to HTML for ${processingType}...`);
+        console.log(`🔤 [BACKGROUND] Raw LLM output before markdown conversion:`, {
+          hasLineBreaks: enhancedText.includes('\n'),
+          hasDoubleLineBreaks: enhancedText.includes('\n\n'),
+          sections: enhancedText.split('###').length - 1,
+          length: enhancedText.length
+        });
+        
+        // Fix missing line breaks between markdown sections
+        let fixedMarkdown = enhancedText;
+        
+        // Add line breaks before ### headings (except the first one)
+        fixedMarkdown = fixedMarkdown.replace(/([^#])(###)/g, '$1\n\n$2');
+        
+        // Add line breaks after headings before bullet points
+        fixedMarkdown = fixedMarkdown.replace(/(###[^#\n]+)(\s*-\s)/g, '$1\n\n$2');
+        
+        console.log(`🔧 [BACKGROUND] Fixed markdown formatting:`, {
+          originalLength: enhancedText.length,
+          fixedLength: fixedMarkdown.length,
+          hasLineBreaks: fixedMarkdown.includes('\n'),
+          hasDoubleLineBreaks: fixedMarkdown.includes('\n\n'),
+          sections: fixedMarkdown.split('###').length - 1
+        });
+        
+        enhancedText = markdownToHtml(fixedMarkdown);
+        console.log(`✅ [BACKGROUND] Markdown conversion completed for ${processingType}:`, {
+          originalLength: transcript.length,
+          enhancedLength: enhancedText.length,
+          processingType
+        });
+      }
+
+      console.log(`🤖 [BACKGROUND] LLM enhancement completed successfully:`, {
+        originalLength: transcript.length,
+        enhancedLength: enhancedText.length,
+        processingType,
+        attempt: attempt
+      });
+
+      return enhancedText;
+      
+    } catch (llmError) {
+      lastError = llmError instanceof Error ? llmError : new Error(String(llmError));
+      
+      console.error(`❌ [BACKGROUND] LLM enhancement failed for ${processingType} (attempt ${attempt}/${maxRetries}):`, llmError);
+      
+      // Check if error is retryable
+      const isRetryable = isRetryableError(llmError);
+      
+      if (attempt === maxRetries || !isRetryable) {
+        console.error(`❌ [BACKGROUND] Final attempt failed or non-retryable error:`, {
+          errorMessage: lastError.message,
+          errorStack: lastError.stack,
+          errorType: lastError.constructor.name,
+          transcriptLength: transcript.length,
+          processingType,
+          configApiUrl: config.apiUrl,
+          hasApiKey: !!config.apiKey,
+          finalAttempt: attempt === maxRetries,
+          isRetryable
+        });
+        break;
+      }
+      
+      // Wait before retrying (exponential backoff)
+      const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // Max 5 seconds
+      console.log(`⏳ [BACKGROUND] Retrying in ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
     }
-
-    console.log(`🤖 [BACKGROUND] LLM enhancement completed:`, {
-      originalLength: transcript.length,
-      enhancedLength: enhancedText.length,
-      processingType
-    });
-
-    return enhancedText;
-    
-  } catch (llmError) {
-    console.error(`❌ [BACKGROUND] LLM enhancement failed for ${processingType}:`, llmError);
-    console.error(`❌ [BACKGROUND] Error details:`, {
-      errorMessage: llmError instanceof Error ? llmError.message : String(llmError),
-      errorStack: llmError instanceof Error ? llmError.stack : 'No stack trace',
-      errorType: llmError instanceof Error ? llmError.constructor.name : typeof llmError,
-      transcriptLength: transcript.length,
-      processingType,
-      configApiUrl: config.apiUrl,
-      hasApiKey: !!config.apiKey
-    });
-    
-    const error = new Error(`LLM processing failed: ${llmError instanceof Error ? llmError.message : 'Unknown error'}`);
-    (error as any).transcriptLength = transcript.length; // Only store length for debugging, not content
-    (error as any).processingType = processingType; // Store processing type for debugging
-    throw error;
   }
+  
+  // If we reach here, all attempts failed
+  const error = new Error(`LLM processing failed after ${maxRetries} attempts: ${lastError?.message || 'Unknown error'}`);
+  (error as any).transcriptLength = transcript.length; // Only store length for debugging, not content
+  (error as any).processingType = processingType; // Store processing type for debugging
+  (error as any).lastError = lastError?.message; // Store last error for debugging
+  throw error;
 }
 
 /**
- * Send enhanced email with processed content
+ * Check if an error is retryable
+ * @param error - Error to check
+ * @returns boolean - True if error is retryable
+ */
+function isRetryableError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  
+  const errorMessage = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+  
+  // Retryable errors
+  const retryablePatterns = [
+    'rate_limit_exceeded',
+    'model_overloaded',
+    'timeout',
+    'network',
+    'connection',
+    'temporary',
+    'service_unavailable',
+    'internal_server_error',
+    'bad_gateway',
+    'gateway_timeout'
+  ];
+  
+  // Non-retryable errors
+  const nonRetryablePatterns = [
+    'insufficient_quota',
+    'invalid_request',
+    'authentication',
+    'authorization',
+    'invalid_api_key',
+    'content_policy_violation'
+  ];
+  
+  // Check for non-retryable patterns first
+  if (nonRetryablePatterns.some(pattern => errorMessage.includes(pattern))) {
+    return false;
+  }
+  
+  // Check for retryable patterns
+  if (retryablePatterns.some(pattern => errorMessage.includes(pattern))) {
+    return true;
+  }
+  
+  // Default to retryable for unknown errors (conservative approach)
+  return true;
+}
+
+/**
+ * Send enhanced email with processed content (with timeout protection)
  * @param userEmail - User's email
  * @param data - Enhanced email data
  */
@@ -214,7 +349,9 @@ async function sendEnhancedEmail(userEmail: string, data: EnhancedEmailData): Pr
 
   console.log('📧 [BACKGROUND] Sending enhanced email with new template system');
   
-  const emailSent = await sendEnhancedEmailFromMailgun(
+  // Add timeout protection to email sending
+  const emailTimeout = 30000; // 30 seconds
+  const emailPromise = sendEnhancedEmailFromMailgun(
     userEmail,
     {
       originalTranscript: data.originalTranscript,
@@ -224,11 +361,29 @@ async function sendEnhancedEmail(userEmail: string, data: EnhancedEmailData): Pr
     }
   );
 
-  if (!emailSent) {
-    throw new Error('Failed to send enhanced email');
-  }
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(() => {
+      reject(new Error(`Email sending timeout after ${emailTimeout}ms`));
+    }, emailTimeout);
+  });
 
-  console.log('📧 [BACKGROUND] Enhanced email sent successfully');
+  try {
+    const emailSent = await Promise.race([emailPromise, timeoutPromise]);
+    
+    if (!emailSent) {
+      throw new Error('Failed to send enhanced email');
+    }
+
+    console.log('📧 [BACKGROUND] Enhanced email sent successfully');
+  } catch (error) {
+    console.error('📧 [BACKGROUND] Enhanced email sending failed:', {
+      error: error instanceof Error ? error.message : String(error),
+      recipient: userEmail,
+      processingType: data.processingType,
+      filename: data.filename
+    });
+    throw error;
+  }
 }
 
 

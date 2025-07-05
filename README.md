@@ -1,8 +1,15 @@
 # Echo Scribe - Voice Note Transcription 🎤→📝
 
-**Version 1.01 – July 5, 2025**
+**Version 1.0.2 – July 5, 2025**
 
 ## 📝 Changelog
+
+### v1.0.2 (2025-07-05)
+- **Documentation Enhancement**: Comprehensive review and alignment of README and Architecture documentation
+- **Project Structure Verification**: Confirmed all components, features, and integrations are properly documented
+- **Security Policy Updates**: Verified all security measures and privacy guarantees are accurately documented
+- **Deployment Guide Consistency**: Ensured all deployment instructions are complete and accurate
+- **Development Workflow Optimization**: Confirmed all development modes and testing procedures are documented
 
 ### v1.01 (2025-07-05)
 - **Beautiful HTML Email Templates for Enhancements**: Enhanced emails (cleaned, summary, quick summary) now use modern, styled HTML templates for a much better reading experience.
@@ -57,8 +64,9 @@ Tired of listening to long voice messages? This service converts your WhatsApp v
 
 Built as a production-ready Next.js 14 application with Google authentication, Cloudflare D1 database, and OpenAI Whisper transcription. Features an innovative "Always Raw + Optional Enhancements" system, user preference management, comprehensive admin dashboard, and real-time voice processing optimized for Vercel deployment.
 
-**New in v1.01:**
+**New in v1.0.2:**
 - The `src/lib/markdown.ts` utility provides secure, reusable markdown-to-HTML conversion for all enhancement emails, leveraging the Showdown library. This ensures summaries and quick summaries are delivered as beautiful, formatted HTML.
+- Comprehensive documentation review ensuring all features, security measures, and deployment procedures are properly documented and aligned between README and Architecture documentation.
 
 **Privacy-First Architecture**: Zero transcript content logging, in-memory-only audio processing, and no persistent storage of voice data. All transcript content is delivered directly via email without being stored on servers, ensuring maximum privacy protection for sensitive voice communications.
 
@@ -221,7 +229,8 @@ src/
 │   ├── audio.ts                        # Audio processing utilities
 │   ├── auth.ts                         # NextAuth configuration
 │   ├── database.ts                     # Database operations with preferences
-│   ├── errors.ts                       # Error handling system
+│   ├── enhanced-errors.ts              # Advanced error handling with Sentry integration
+│   ├── errors.ts                       # Core error handling system
 │   ├── mailgun.ts                      # Email processing
 │   ├── markdown.ts                     # Markdown-to-HTML conversion utility for enhancement emails
 │   ├── rate-limit.ts                   # In-memory rate limiting

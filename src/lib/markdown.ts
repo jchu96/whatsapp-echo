@@ -12,12 +12,14 @@ const converter = new showdown.Converter({
   completeHTMLDocument: false,
   metadata: false,
   splitAdjacentBlockquotes: true,
-  simpleLineBreaks: true,
+  simpleLineBreaks: false,
   requireSpaceBeforeHeadingText: false,
   ghMentions: false,
   encodeEmails: true,
   openLinksInNewWindow: true,
-  backslashEscapesHTMLTags: true
+  backslashEscapesHTMLTags: true,
+  headerLevelStart: 3,
+  noHeaderId: true
 });
 
 /**
@@ -31,23 +33,35 @@ export function markdownToHtml(markdown: string): string {
   }
 
   try {
+    console.log('🔄 [MARKDOWN] Converting markdown to HTML:', {
+      inputLength: markdown.length
+    });
+
     // Convert markdown to HTML
     let html = converter.makeHtml(markdown);
+    
+    console.log('✅ [MARKDOWN] Initial conversion result:', {
+      outputLength: html.length
+    });
     
     // Clean up the HTML for email compatibility
     html = html
       // Remove any script tags for security
       .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-      // Ensure proper line breaks
-      .replace(/\n/g, '<br>')
-      // Clean up extra whitespace
+      // Remove any style tags for security
+      .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+      // Clean up extra whitespace (but preserve HTML structure)
       .replace(/\s+/g, ' ')
       .trim();
+    
+    console.log('🧹 [MARKDOWN] Final cleaned HTML:', {
+      outputLength: html.length
+    });
     
     return html;
   } catch (error) {
     console.error('❌ [MARKDOWN] Failed to convert markdown to HTML:', error);
-    // Return original text if conversion fails
+    // Return original text with basic line break conversion if conversion fails
     return markdown.replace(/\n/g, '<br>');
   }
 }

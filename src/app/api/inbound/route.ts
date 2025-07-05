@@ -7,7 +7,7 @@ import {
   sendSuccessEmail,
   sendErrorEmail 
 } from '@/lib/mailgun';
-import { getUserBySlug, insertVoiceEvent, ensureUserPreferences, insertVoiceEventAndGetId, getUserRequestedEnhancements, serializeEnhancements } from '@/lib/database';
+import { getUserBySlug, insertVoiceEvent, ensureUserPreferences, insertVoiceEventAndGetId, getUserRequestedEnhancements, serializeEnhancements, updateVoiceEvent } from '@/lib/database';
 import { validateAudioFile } from '@/lib/audio';
 import { fastTranscribeAudio, cleanTranscription, categorizeWhisperError } from '@/lib/whisper';
 import { 
@@ -485,19 +485,88 @@ export async function POST(request: NextRequest) {
           .update(process.env.NEXTAUTH_SECRET || '')
           .digest('hex');
 
-        fetch(`${request.url.replace('/api/inbound', '/api/background/enhance-transcript')}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${authToken}`
-          },
-          body: JSON.stringify(enhancementMetadata)
-        }).catch((enhancementError: Error) => {
-          console.error('❌ [INBOUND] Enhancement processing failed asynchronously:', enhancementError);
-          // Don't await this - let it fail in background without affecting response
-        });
+        // Construct proper background API URL
+        const baseUrl = new URL(request.url).origin;
+        const backgroundUrl = `${baseUrl}/api/background/enhance-transcript`;
         
-        enhancementStatus = 'queued';
+        console.log('🔗 [INBOUND] Calling background enhancement API:', {
+          backgroundUrl,
+          eventId: enhancementEventId,
+          enhancementTypes: requestedEnhancements,
+          hasTranscript: !!enhancementMetadata.transcript,
+          transcriptLength: enhancementMetadata.transcript?.length || 0
+        });
+
+        // Add timeout to background API call to prevent hanging
+        const backgroundApiTimeout = 10000; // 10 seconds
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), backgroundApiTimeout);
+
+        try {
+          const response = await fetch(backgroundUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify(enhancementMetadata),
+            signal: controller.signal
+          });
+
+          clearTimeout(timeoutId);
+          
+          console.log('🔗 [INBOUND] Background API response received:', {
+            status: response.status,
+            statusText: response.statusText,
+            ok: response.ok
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Background API failed with status ${response.status}: ${response.statusText}`);
+          }
+          
+          const result = await response.json();
+          console.log('✅ [INBOUND] Background enhancement API call successful:', result);
+          
+          enhancementStatus = 'queued';
+          
+        } catch (backgroundError) {
+          clearTimeout(timeoutId);
+          
+          console.error('❌ [INBOUND] Background enhancement API call failed:', {
+            error: backgroundError instanceof Error ? backgroundError.message : String(backgroundError),
+            stack: backgroundError instanceof Error ? backgroundError.stack : 'No stack trace',
+            backgroundUrl,
+            eventId: enhancementEventId,
+            enhancementTypes: requestedEnhancements
+          });
+          
+          // Update database with background API failure
+          if (enhancementEventId) {
+            try {
+              await updateVoiceEvent(enhancementEventId, {
+                status: 'failed',
+                error_message: `Background API failed: ${backgroundError instanceof Error ? backgroundError.message : 'Unknown error'}`
+              });
+            } catch (dbError) {
+              console.error('❌ [INBOUND] Failed to update database with background API failure:', dbError);
+            }
+          }
+          
+          enhancementStatus = 'failed';
+          
+          // Still report this error properly
+          await handleProcessingError(backgroundError, {
+            userId: user.id,
+            userEmail: user.google_email,
+            phase: 'background_api_call',
+            additionalData: {
+              backgroundUrl,
+              eventId: enhancementEventId,
+              enhancementTypes: requestedEnhancements
+            }
+          });
+        }
         
         console.log('✅ [INBOUND] Enhancement processing queued successfully');
         

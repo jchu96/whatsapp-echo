@@ -3,7 +3,7 @@ import Mailgun from 'mailgun.js';
 import formData from 'form-data';
 import { createHmac } from 'crypto';
 import { getMailgunConfig } from '@/utils/env';
-import { markdownToHtml, containsMarkdown } from '@/lib/markdown';
+// Markdown conversion is now handled in voice-processor.ts
 import { 
   MailgunWebhookPayload, 
   MailgunAttachment, 
@@ -155,10 +155,8 @@ const EMAIL_TEMPLATES = {
     const processingLabel = getProcessingLabel(data.processingType);
     const processingDescription = getProcessingDescription(data.processingType);
 
-    // Convert markdown to HTML if the content contains markdown
-    const enhancedContentHtml = containsMarkdown(data.enhancedContent) 
-      ? markdownToHtml(data.enhancedContent)
-      : data.enhancedContent.replace(/\n/g, '<br>');
+    // Enhanced content is already converted to HTML in voice-processor.ts for summary types
+    const enhancedContentHtml = data.enhancedContent;
 
     return {
       subject: `${processingLabel}: ${data.filename}`,
@@ -555,13 +553,13 @@ export async function sendEmail(
     console.log('📧 [MAILGUN] Sending email via official SDK:', {
       to,
       subject: template.subject,
-      from: `Voice Transcription <${config.email}>`,
+      from: `Echo Scribe <${config.email}>`,
       domain: config.domain
     });
     
     // Official SDK pattern: mg.messages.create(domain, messageData)
     const messageData = {
-      from: `Voice Transcription <${config.email}>`,
+      from: `Echo Scribe <${config.email}>`,
       to: [to], // Official pattern uses array for 'to' field
       subject: template.subject,
       text: template.text,
