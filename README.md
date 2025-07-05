@@ -6,21 +6,24 @@ Tired of listening to long voice messages? This service converts your WhatsApp v
 
 ## 🚀 What It Does
 
-**It's ridiculously simple:** Send voice note ➜ Get text back.
+**It's ridiculously simple:** Send voice note ➜ Get multiple versions back.
 
 🎤 **Record a voice note** in WhatsApp (or any app)  
 📧 **Email the audio file** to your personal transcription address  
-⚡ **Get the text back** in seconds, cleaned up and ready to copy  
+⚡ **Get raw transcript first** (15-30 seconds) - never wait for enhancements  
+✨ **Receive AI enhancements** (optional) - cleaned formatting, summaries, action items  
 
 **Works with everything:** M4A, MP3, WAV, OGG files up to 25 minutes long  
 🔒 **Completely private:** Audio processed securely and deleted immediately  
-📱 **No tech skills needed:** Just email the file—that's it  
+📱 **No tech skills needed:** Just email the file—configure preferences once  
 💰 **Almost free to run:** Built on free tiers (Vercel Hobby + Cloudflare D1 + Mailgun free)—only OpenAI costs money
 
 ### Perfect for...
-- **Skimming long voice notes** instead of listening to the whole thing
-- **Quoting audio** in messages or documents
-- **Keeping searchable records** of voice conversations
+- **Skimming long voice notes** with instant AI summaries and key points
+- **Getting clean, formatted text** for documents and professional use
+- **Extracting action items** from meeting recordings and voice memos
+- **Feeding enhanced transcripts** to AI tools for further processing
+- **Converting voice notes** to structured, searchable text records
 - **Accessibility** when you can't listen to audio
 
 ## 💰 Cost Breakdown
@@ -40,7 +43,7 @@ Tired of listening to long voice messages? This service converts your WhatsApp v
 
 Built as a production-ready Next.js 14 application with Google authentication, Cloudflare D1 database, and OpenAI Whisper transcription. Features an innovative "Always Raw + Optional Enhancements" system, user preference management, comprehensive admin dashboard, and real-time voice processing optimized for Vercel deployment.
 
-**Privacy-First Architecture**: Zero transcript content logging, in-memory-only audio processing, and no persistent storage of voice data. All transcript content is delivered directly via email without being stored on servers.
+**Privacy-First Architecture**: Zero transcript content logging, in-memory-only audio processing, and no persistent storage of voice data. All transcript content is delivered directly via email without being stored on servers, ensuring maximum privacy protection for sensitive voice communications.
 
 📋 **[Complete Architecture Documentation](docs/architecture.md)** - Detailed system architecture, component interactions, data flows, and operational considerations.
 
@@ -123,6 +126,41 @@ This setup provides excellent performance, cost efficiency, and leverages each p
 - 🚀 **Vercel Optimized**: Function timeouts and performance tuning
 - 📈 **Status Tracking**: Database-based enhancement progress monitoring
 
+## 🔒 Security & Privacy
+
+### Privacy-First Architecture
+WhatsApp Echo is built with a **privacy-first design** that prioritizes user data protection:
+
+- **🚫 Zero Transcript Logging**: Voice transcript content is NEVER logged to console, files, or monitoring systems
+- **🧠 In-Memory Processing**: Audio files are processed entirely in memory without disk writes
+- **📧 Immediate Delivery**: Transcripts delivered via email, not stored on servers
+- **🔍 Metadata-Only Logging**: System logs contain only technical data (file size, processing time, success/failure)
+- **🛡️ Privacy-Safe Error Handling**: Error objects contain only technical metadata, never transcript content
+
+### Security Measures
+- **🔐 Google OAuth Integration**: Secure authentication using Google's OAuth 2.0 flow
+- **🎫 JWT Session Management**: NextAuth.js handles secure session tokens
+- **🔑 Token-Based Background API**: SHA256 authentication for background processing
+- **🛡️ CSRF Protection**: Token-based request validation for all forms
+- **⚡ Rate Limiting**: Per-user and per-endpoint rate limiting with abuse prevention
+- **📋 Input Validation**: Comprehensive file type, size, and format validation
+- **🔒 Security Headers**: CSP, XSS protection, clickjacking prevention, HTTPS enforcement
+
+### What We DON'T Store
+- ❌ **Voice transcript content** - Never stored in database or logs
+- ❌ **Audio files** - Processed in memory only, never written to disk
+- ❌ **Sensitive user data** - Only metadata and account information stored
+- ❌ **Processing content** - AI enhancement results not logged or stored
+
+### What We DO Store
+- ✅ **User account information** - Google email, approval status, created date
+- ✅ **Processing metadata** - File size, duration, processing time, success/failure
+- ✅ **User preferences** - Enhancement settings (cleanup, summary options)
+- ✅ **Technical logs** - Performance metrics, error counts (no content)
+
+### Security Documentation
+📋 **[Complete Security Policy](SECURITY.md)** - Detailed security measures, privacy guarantees, vulnerability reporting, and security best practices.
+
 ## 📂 Complete Project Structure
 
 ```
@@ -183,7 +221,8 @@ Config Files:
 ├── postcss.config.js                   # PostCSS config
 ├── vercel.json                         # Vercel deployment config
 ├── wrangler.toml                       # Cloudflare D1 database management
-└── env.example                         # Environment template
+├── env.example                         # Environment template
+└── SECURITY.md                         # Security policy and privacy guarantees
 ```
 
 ## 🗄️ Database Schema
@@ -404,15 +443,47 @@ This system is designed with **zero transcript logging** and **privacy-first pri
 
 ## 🎤 Voice Processing Pipeline
 
-### Complete Processing Flow (Always Raw + Background Enhancements)
+### Complete Processing Flow (Always Raw + AI Enhancements)
 ```
-Email Received → Webhook Validation → User Lookup → Get Preferences →
-File Validation → Audio Download → Whisper Transcription (Raw) → 
-Database Logging (metadata only) → Raw Email Response → Queue Background Processing (if enabled) →
-Background Enhancement API → Token Validation → GPT-4o-mini Enhancement → Enhanced Email Response
+Email Received → Webhook Validation → User Lookup → Get User Preferences →
+File Validation → Audio Download → OpenAI Whisper Transcription (Raw) → 
+Database Logging (metadata only) → Raw Email Delivery (15-30s) → 
+Queue Background AI Processing (if enabled) → Background Enhancement API → 
+Token Validation → GPT-4o-mini Cleanup/Summary → Enhanced Email Delivery
 ```
 **Privacy-Protected**: All processing happens in memory with zero transcript content logging.
 **Background Processing**: Secure token-based API prevents serverless function timeouts.
+**AI-Powered**: GPT-4o-mini provides grammar cleanup and intelligent summarization.
+**User-Controlled**: Enhancement preferences configured once in dashboard, applied to all voice notes.
+
+### 🤖 AI Enhancement Options
+
+#### Raw Transcript (Always Included)
+- **Delivery**: 15-30 seconds, never delayed
+- **Content**: Exactly as transcribed by OpenAI Whisper
+- **Format**: Basic punctuation, natural speech patterns
+- **Use Case**: Immediate access, direct quotes, feeding to other AI tools
+
+#### Cleaned Transcript (Optional)
+- **AI Model**: GPT-4o-mini with specialized cleanup prompts
+- **Improvements**: Fixed grammar, proper punctuation, removed filler words ("um", "uh", "like")
+- **Formatting**: Natural paragraph breaks, proper capitalization
+- **Preservation**: Original wording and tone maintained - no paraphrasing
+- **Use Case**: Professional documents, clean copy-paste text, presentation materials
+
+#### Smart Summary (Optional)
+- **AI Model**: GPT-4o-mini with structured summarization prompts
+- **Format**: Markdown with organized sections
+- **Sections**: Main Topic (always), Key Points, Action Items, Important Details
+- **Length**: ≤150 words for comprehensive summaries
+- **Content**: Bullet-pointed key ideas, quoted important specifics (names/dates/numbers)
+- **Use Case**: Quick overview, meeting notes, task extraction, executive summaries
+
+#### Enhancement Quality Control
+- **Hallucination Prevention**: AI prompts designed to only use content from original transcript
+- **Accuracy Focus**: Quality checks to verify every statement comes from source material
+- **Content Preservation**: Enhancement improves format/structure without adding new information
+- **Error Safety**: Failed enhancements don't affect raw transcript delivery
 
 ### Timeout Management (< 60 seconds)
 - **Total Safety Margin**: 55 seconds (5s buffer)
@@ -482,6 +553,12 @@ curl https://your-domain.vercel.app/api/admin/stats
 - **XSS Prevention**: Input sanitization
 
 ## 🐛 Troubleshooting Guide
+
+### Security Issues
+**If you discover a security vulnerability**, please report it responsibly:
+- **DO NOT** create public GitHub issues for security vulnerabilities
+- **Email** the repository maintainer with detailed information
+- **See** [SECURITY.md](SECURITY.md) for complete vulnerability reporting guidelines
 
 ### Common Issues & Solutions
 
@@ -572,21 +649,28 @@ wrangler d1 execute voice-transcription-prod \
 5. **Receive Multiple Transcripts**: Get raw transcript immediately + enhanced versions
 6. **View History**: Check dashboard for past voice notes
 
-### "Always Raw + Background Enhancements" System
+### "Always Raw + AI-Powered Enhancements" System
 
 **How It Works:**
-- **Raw Transcript** (Always): Delivered in 15-30 seconds, exactly as transcribed
-- **Cleaned Transcript** (Optional): Grammar and formatting improvements via GPT-4o-mini
-- **Summary** (Optional): Key points and action items extracted by AI
-- **Multiple Emails**: Each version arrives in a separate, clearly labeled email
+- **Raw Transcript** (Always): Delivered in 15-30 seconds, exactly as transcribed by OpenAI Whisper
+- **Cleaned Transcript** (Optional): Grammar fixes, proper punctuation, removed filler words, paragraph breaks
+- **Smart Summary** (Optional): Structured summary with main topic, key points, action items, and important details (≤150 words)
+- **Multiple Emails**: Each version arrives as a separate, clearly labeled email
 - **Background Processing**: Secure token-based API prevents serverless function timeouts
+
+**AI Enhancement Details:**
+- **Cleanup Enhancement**: Corrects transcription mistakes, fixes punctuation/capitalization, removes "um/uh/like", adds natural paragraph breaks - preserves original wording
+- **Summary Enhancement**: Extracts main topic, bullet-pointed key ideas, actionable tasks with context, and quoted important details (names/dates/numbers)
+- **User Control**: Configure preferences once in dashboard - applies to all future voice notes
+- **Quality Focused**: AI prompts designed to prevent hallucination and maintain accuracy
 
 **User Benefits:**
 - **Immediate Access**: Never wait for enhancements - raw transcript arrives first
-- **Flexible Options**: Enable cleanup, summary, both, or neither
-- **Clear Labeling**: Email subjects clearly indicate which version you're reading
+- **Flexible Options**: Enable cleanup, summary, both, or neither via dashboard preferences
+- **Clear Labeling**: Email subjects clearly indicate which version you're reading ([Raw], [Cleaned], [Summary])
 - **No Delays**: Enhanced processing happens in background without affecting speed
 - **Reliable Processing**: Background API ensures enhancements complete even for large files
+- **Professional Quality**: Enhanced versions ready for documents, AI tools, and business use
 
 ### For Administrators
 1. **Access Dashboard**: Navigate to `/admin` with admin account
@@ -613,6 +697,7 @@ wrangler d1 execute voice-transcription-prod \
 
 For detailed information about specific aspects of the system:
 
+- **[Security Policy](SECURITY.md)** - Comprehensive security measures, privacy guarantees, and vulnerability reporting
 - **[User Manual](docs/USER_MANUAL.md)** - Complete end-user guide for signup, workflow, and usage
 - **[Deployment Guide](docs/DEPLOYMENT.md)** - Complete deployment and configuration instructions
 - **[Webhook Optimization](docs/WEBHOOK_OPTIMIZATION.md)** - FormData simplification and performance improvements
@@ -654,6 +739,7 @@ This voice note transcription service is now production-ready with:
 - ✅ Full Vercel deployment optimization
 - ✅ Secure background processing API with token authentication
 - ✅ Database status tracking for enhancement progress
+- ✅ Comprehensive security policy and privacy guarantees
 
 Perfect for organizations needing reliable voice-to-text processing with user management, admin oversight, and enterprise-grade privacy protection.
 

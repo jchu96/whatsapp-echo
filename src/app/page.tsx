@@ -156,8 +156,8 @@ export default async function HomePage() {
                     <span className="text-green-600 font-bold">✓</span>
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-2">Turns your WhatsApp voice notes into free-to-use text</h3>
-                    <p className="text-gray-600 text-sm">Forward or attach the audio (M4A, MP3, WAV, etc., up to ≈ 25 minutes) to the special address we give you.</p>
+                    <h3 className="font-semibold text-gray-900 mb-2">Always Raw + Optional AI Enhancements</h3>
+                    <p className="text-gray-600 text-sm">Get your raw transcript first (15-30 seconds), then choose from AI-powered cleanup, summaries, or both. Each version arrives as a separate email.</p>
                   </div>
                 </div>
                 
@@ -167,7 +167,7 @@ export default async function HomePage() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-2">Copy-paste—and AI-ready—transcripts</h3>
-                    <p className="text-gray-600 text-sm">The reply arrives as plain email text, ready to highlight, copy, drop into any document, or feed straight into your favourite AI engine.</p>
+                    <p className="text-gray-600 text-sm">Raw transcripts are instantly usable. Enhanced versions include cleaned formatting, grammar fixes, and intelligent summaries—all ready for documents or AI tools.</p>
                   </div>
                 </div>
                 
@@ -176,8 +176,8 @@ export default async function HomePage() {
                     <span className="text-purple-600 font-bold">✓</span>
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-2">Fast turnaround</h3>
-                    <p className="text-gray-600 text-sm">Most files come back in under a minute, already tidied up for easy reading.</p>
+                    <h3 className="font-semibold text-gray-900 mb-2">Smart Enhancement Options</h3>
+                    <p className="text-gray-600 text-sm">Choose <strong>Cleanup</strong> for grammar & formatting fixes, <strong>Summary</strong> for key points & action items, or both. All configurable in your dashboard preferences.</p>
                   </div>
                 </div>
               </div>
@@ -189,13 +189,23 @@ export default async function HomePage() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-2">No extra apps or tech know-how</h3>
-                    <p className="text-gray-600 text-sm">Just send an email—no uploads, settings, or log-ins required.</p>
+                    <p className="text-gray-600 text-sm">Just send an email—no uploads, settings, or log-ins required. Configure your enhancement preferences once in the dashboard.</p>
                   </div>
                 </div>
                 
                 <div className="group flex items-start space-x-4 hover:transform hover:translate-x-1 transition-transform duration-200">
                   <div className="flex-shrink-0 w-8 h-8 bg-red-100 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
                     <span className="text-red-600 font-bold">✓</span>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-2">Fast & Reliable Processing</h3>
+                    <p className="text-gray-600 text-sm">Raw transcripts arrive in 15-30 seconds. Enhanced versions follow in background processing, ensuring you never wait for basic transcription.</p>
+                  </div>
+                </div>
+                
+                <div className="group flex items-start space-x-4 hover:transform hover:translate-x-1 transition-transform duration-200">
+                  <div className="flex-shrink-0 w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                    <span className="text-indigo-600 font-bold">✓</span>
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-2">Private by design, temporary by default</h3>
@@ -207,26 +217,121 @@ export default async function HomePage() {
           </div>
         </div>
 
+        {/* Enhancement Options Section */}
+        <div className="max-w-4xl mx-auto mb-16 transform hover:scale-[1.01] transition-transform duration-300">
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 backdrop-blur-sm rounded-2xl shadow-xl p-8 md:p-12 border border-blue-200">
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
+                <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              <h2 className="text-3xl font-bold mb-4 text-gray-900">AI-Powered Enhancement Options</h2>
+              <p className="text-lg text-gray-700 leading-relaxed max-w-2xl mx-auto">
+                Always get your raw transcript first, then choose which AI enhancements you want. Each version arrives as a separate, clearly labeled email.
+              </p>
+            </div>
+            
+            <div className="grid md:grid-cols-3 gap-8 mb-8">
+              <div className="text-center p-6 bg-white/80 backdrop-blur-sm rounded-xl border border-blue-200">
+                <div className="inline-flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mb-4">
+                  <span className="text-green-600 font-bold text-xl">📝</span>
+                </div>
+                <h3 className="font-bold text-lg mb-3 text-gray-900">Raw Transcript</h3>
+                <p className="text-gray-600 text-sm mb-3">Always delivered first in 15-30 seconds</p>
+                <div className="text-xs text-gray-500 space-y-1">
+                  <div>• Exactly as spoken</div>
+                  <div>• Basic punctuation</div>
+                  <div>• Immediate delivery</div>
+                  <div>• No waiting</div>
+                </div>
+              </div>
+              
+              <div className="text-center p-6 bg-white/80 backdrop-blur-sm rounded-xl border border-blue-200">
+                <div className="inline-flex items-center justify-center w-12 h-12 bg-blue-100 rounded-full mb-4">
+                  <span className="text-blue-600 font-bold text-xl">✨</span>
+                </div>
+                <h3 className="font-bold text-lg mb-3 text-gray-900">Cleaned Transcript</h3>
+                <p className="text-gray-600 text-sm mb-3">Grammar & formatting improvements</p>
+                <div className="text-xs text-gray-500 space-y-1">
+                  <div>• Fixed punctuation</div>
+                  <div>• Proper capitalization</div>
+                  <div>• Removed filler words</div>
+                  <div>• Paragraph breaks</div>
+                </div>
+              </div>
+              
+              <div className="text-center p-6 bg-white/80 backdrop-blur-sm rounded-xl border border-blue-200">
+                <div className="inline-flex items-center justify-center w-12 h-12 bg-purple-100 rounded-full mb-4">
+                  <span className="text-purple-600 font-bold text-xl">📋</span>
+                </div>
+                <h3 className="font-bold text-lg mb-3 text-gray-900">Summary</h3>
+                <p className="text-gray-600 text-sm mb-3">Key points & action items extracted</p>
+                <div className="text-xs text-gray-500 space-y-1">
+                  <div>• Main topic</div>
+                  <div>• Key points</div>
+                  <div>• Action items</div>
+                  <div>• Important details</div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white/60 backdrop-blur-sm rounded-xl p-6 border border-blue-200">
+              <h3 className="font-bold text-lg text-gray-900 mb-3 text-center">How It Works</h3>
+              <div className="grid md:grid-cols-4 gap-4 text-center">
+                <div className="group">
+                  <div className="text-2xl mb-2 group-hover:scale-110 transition-transform duration-200">📧</div>
+                  <div className="text-sm font-semibold mb-1">Send Voice Note</div>
+                  <div className="text-xs text-gray-600">Email your audio file</div>
+                </div>
+                <div className="group">
+                  <div className="text-2xl mb-2 group-hover:scale-110 transition-transform duration-200">⚡</div>
+                  <div className="text-sm font-semibold mb-1">Get Raw (15-30s)</div>
+                  <div className="text-xs text-gray-600">Immediate transcript</div>
+                </div>
+                <div className="group">
+                  <div className="text-2xl mb-2 group-hover:scale-110 transition-transform duration-200">🤖</div>
+                  <div className="text-sm font-semibold mb-1">AI Processing</div>
+                  <div className="text-xs text-gray-600">Background enhancements</div>
+                </div>
+                <div className="group">
+                  <div className="text-2xl mb-2 group-hover:scale-110 transition-transform duration-200">📬</div>
+                  <div className="text-sm font-semibold mb-1">Receive Enhanced</div>
+                  <div className="text-xs text-gray-600">Separate labeled emails</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Use Cases Section */}
         <div className="max-w-4xl mx-auto mb-16 transform hover:scale-[1.01] transition-transform duration-300">
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-8 md:p-12 border border-gray-100">
-            <h2 className="text-3xl font-bold mb-6 text-gray-900">Great for…</h2>
+            <h2 className="text-3xl font-bold mb-6 text-gray-900">Perfect for…</h2>
             <div className="grid md:grid-cols-2 gap-6">
               <div className="group flex items-center space-x-3 hover:transform hover:translate-x-1 transition-transform duration-200">
                 <div className="w-2 h-2 bg-blue-500 rounded-full group-hover:scale-150 transition-transform duration-200"></div>
-                <span className="text-gray-700">Skimming long voice notes instead of listening</span>
+                <span className="text-gray-700">Skimming long voice notes with instant summaries</span>
               </div>
               <div className="group flex items-center space-x-3 hover:transform hover:translate-x-1 transition-transform duration-200">
                 <div className="w-2 h-2 bg-blue-500 rounded-full group-hover:scale-150 transition-transform duration-200"></div>
-                <span className="text-gray-700">Quoting parts of conversations in chats or docs</span>
+                <span className="text-gray-700">Getting clean, copy-pastable text for documents</span>
               </div>
               <div className="group flex items-center space-x-3 hover:transform hover:translate-x-1 transition-transform duration-200">
                 <div className="w-2 h-2 bg-blue-500 rounded-full group-hover:scale-150 transition-transform duration-200"></div>
-                <span className="text-gray-700">Sending audio snippets to AI tools for summaries or chat</span>
+                <span className="text-gray-700">Extracting action items from meeting recordings</span>
               </div>
               <div className="group flex items-center space-x-3 hover:transform hover:translate-x-1 transition-transform duration-200">
                 <div className="w-2 h-2 bg-blue-500 rounded-full group-hover:scale-150 transition-transform duration-200"></div>
-                <span className="text-gray-700">Keeping searchable records of discussions</span>
+                <span className="text-gray-700">Feeding enhanced transcripts to AI tools</span>
+              </div>
+              <div className="group flex items-center space-x-3 hover:transform hover:translate-x-1 transition-transform duration-200">
+                <div className="w-2 h-2 bg-blue-500 rounded-full group-hover:scale-150 transition-transform duration-200"></div>
+                <span className="text-gray-700">Keeping searchable records of voice conversations</span>
+              </div>
+              <div className="group flex items-center space-x-3 hover:transform hover:translate-x-1 transition-transform duration-200">
+                <div className="w-2 h-2 bg-blue-500 rounded-full group-hover:scale-150 transition-transform duration-200"></div>
+                <span className="text-gray-700">Converting voice notes to structured text for emails</span>
               </div>
             </div>
           </div>

@@ -93,6 +93,60 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
+      {/* Enhancement Options */}
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            ✨ AI-Powered Enhancement Options
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg border border-blue-200">
+              <h4 className="font-semibold mb-3 text-blue-900">Always Raw + Optional Enhancements</h4>
+              <p className="text-sm text-blue-800 mb-4">
+                You always get your raw transcript first (15-30 seconds), then you can choose which AI enhancements to receive. 
+                Each version arrives as a separate, clearly labeled email.
+              </p>
+              
+              <div className="grid md:grid-cols-3 gap-4">
+                <div className="text-center p-4 bg-white/80 rounded-lg border border-blue-100">
+                  <div className="text-xl mb-2">📝</div>
+                  <h5 className="font-semibold mb-1 text-sm">Raw Transcript</h5>
+                  <p className="text-xs text-muted-foreground">Always sent first • Exactly as spoken • No AI changes</p>
+                </div>
+                <div className="text-center p-4 bg-white/80 rounded-lg border border-blue-100">
+                  <div className="text-xl mb-2">✨</div>
+                  <h5 className="font-semibold mb-1 text-sm">Cleaned Version</h5>
+                  <p className="text-xs text-muted-foreground">Fixed grammar • Proper punctuation • Removed fillers</p>
+                </div>
+                <div className="text-center p-4 bg-white/80 rounded-lg border border-blue-100">
+                  <div className="text-xl mb-2">📋</div>
+                  <h5 className="font-semibold mb-1 text-sm">Smart Summary</h5>
+                  <p className="text-xs text-muted-foreground">Key points • Action items • Important details</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-semibold text-orange-900 mb-1">Configure Your Preferences</h4>
+                  <p className="text-sm text-orange-800">
+                    Choose which enhancements you want to receive for every voice note.
+                  </p>
+                </div>
+                <Link href="/dashboard/preferences">
+                  <Button size="sm" className="bg-orange-600 hover:bg-orange-700">
+                    ⚙️ Settings
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Usage Instructions */}
       <Card>
         <CardHeader>
@@ -105,30 +159,30 @@ export default async function DashboardPage() {
             <div className="grid gap-4 md:grid-cols-4">
               <div className="text-center p-4 border rounded-lg">
                 <div className="text-2xl mb-2">📱</div>
-                <h3 className="font-semibold mb-2">Receive</h3>
+                <h3 className="font-semibold mb-2">Send Voice Note</h3>
                 <p className="text-sm text-muted-foreground">
-                  Get a voice note in WhatsApp
+                  Forward from WhatsApp or attach to email
                 </p>
               </div>
               <div className="text-center p-4 border rounded-lg">
-                <div className="text-2xl mb-2">⬆️</div>
-                <h3 className="font-semibold mb-2">Select & Forward</h3>
+                <div className="text-2xl mb-2">⚡</div>
+                <h3 className="font-semibold mb-2">Get Raw (15-30s)</h3>
                 <p className="text-sm text-muted-foreground">
-                  Tap the voice note, then forward
+                  Receive immediate raw transcript
                 </p>
               </div>
               <div className="text-center p-4 border rounded-lg">
-                <div className="text-2xl mb-2">📧</div>
-                <h3 className="font-semibold mb-2">Email</h3>
+                <div className="text-2xl mb-2">🤖</div>
+                <h3 className="font-semibold mb-2">AI Processing</h3>
                 <p className="text-sm text-muted-foreground">
-                  Choose your email app and send to your alias above
+                  Background enhancement (if enabled)
                 </p>
               </div>
               <div className="text-center p-4 border rounded-lg">
-                <div className="text-2xl mb-2">📝</div>
-                <h3 className="font-semibold mb-2">Get Transcript</h3>
+                <div className="text-2xl mb-2">📬</div>
+                <h3 className="font-semibold mb-2">Receive Enhanced</h3>
                 <p className="text-sm text-muted-foreground">
-                  Receive transcript by email to your personal inbox
+                  Get cleaned/summary versions separately
                 </p>
               </div>
             </div>
@@ -147,12 +201,13 @@ export default async function DashboardPage() {
 
             {/* WhatsApp Specific Tips */}
             <div className="bg-green-50 p-4 rounded-lg">
-              <h4 className="font-semibold mb-2 text-green-900">💡 WhatsApp Tips:</h4>
+              <h4 className="font-semibold mb-2 text-green-900">💡 Enhancement Tips:</h4>
               <ul className="text-sm text-green-800 space-y-1">
-                <li>• WhatsApp exports voice notes as .m4a files when shared via email</li>
-                <li>• Long voice notes may take a few minutes to process</li>
-                <li>• Multiple voice notes? Send them in separate emails for faster processing</li>
-                <li>• No need to download first - forward directly from WhatsApp</li>
+                <li>• Raw transcript arrives first - no waiting for enhancements</li>
+                <li>• Enhanced versions follow in 30-60 seconds if enabled</li>
+                <li>• Each enhancement arrives as a separate, labeled email</li>
+                <li>• Configure preferences once - applies to all future voice notes</li>
+                <li>• You can change enhancement preferences anytime</li>
               </ul>
             </div>
           </div>
