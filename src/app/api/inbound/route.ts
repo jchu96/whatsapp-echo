@@ -498,9 +498,9 @@ export async function POST(request: NextRequest) {
         });
 
         // Add timeout to background API call to prevent hanging
-        const backgroundApiTimeout = 10000; // 10 seconds
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), backgroundApiTimeout);
+        const backgroundApiTimeout = 60000; // 60 seconds
+        const backgroundController = new AbortController();
+        const backgroundTimeoutId = setTimeout(() => backgroundController.abort(), backgroundApiTimeout);
 
         try {
           const response = await fetch(backgroundUrl, {
@@ -510,10 +510,10 @@ export async function POST(request: NextRequest) {
               'Authorization': `Bearer ${authToken}`
             },
             body: JSON.stringify(enhancementMetadata),
-            signal: controller.signal
+            signal: backgroundController.signal
           });
 
-          clearTimeout(timeoutId);
+          clearTimeout(backgroundTimeoutId);
           
           console.log('🔗 [INBOUND] Background API response received:', {
             status: response.status,
@@ -531,7 +531,7 @@ export async function POST(request: NextRequest) {
           enhancementStatus = 'queued';
           
         } catch (backgroundError) {
-          clearTimeout(timeoutId);
+          clearTimeout(backgroundTimeoutId);
           
           console.error('❌ [INBOUND] Background enhancement API call failed:', {
             error: backgroundError instanceof Error ? backgroundError.message : String(backgroundError),
@@ -559,6 +559,7 @@ export async function POST(request: NextRequest) {
           await handleProcessingError(backgroundError, {
             userId: user.id,
             userEmail: user.google_email,
+            filename: audioFile.name,
             phase: 'background_api_call',
             additionalData: {
               backgroundUrl,
