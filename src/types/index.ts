@@ -96,20 +96,20 @@ export interface UserWithStats extends User {
 // Environment variables type
 export interface EnvConfig {
   NEXTAUTH_URL: string;
-  NEXTAUTH_SECRET: string;
+  NEXTAUTH_SECRET: string | undefined;
   GOOGLE_CLIENT_ID: string;
   GOOGLE_CLIENT_SECRET: string;
-  D1_URL: string;
-  D1_DATABASE_ID: string;
-  D1_API_KEY: string;
-  ADMIN_EMAILS: string;
+  D1_URL: string | undefined;
+  D1_DATABASE_ID: string | undefined;
+  D1_API_KEY: string | undefined;
+  ADMIN_EMAILS: string | undefined;
   VERCEL_URL?: string;
   VERCEL_ENV?: string;
   // Phase 2 additions
-  MAILGUN_DOMAIN: string;
-  MAILGUN_API_KEY: string;
-  MAILGUN_EMAIL: string;
-  OPENAI_API_KEY: string;
+  MAILGUN_DOMAIN: string | undefined;
+  MAILGUN_API_KEY: string | undefined;
+  MAILGUN_EMAIL: string | undefined;
+  OPENAI_API_KEY: string | undefined;
   AIMLAPI_KEY?: string;
   MAX_FILE_SIZE_MB?: string;
   DOWNLOAD_TIMEOUT_SEC?: string;

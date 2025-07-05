@@ -60,20 +60,20 @@ export function getEnvConfig(): EnvConfig {
 
   return {
     NEXTAUTH_URL: process.env.NEXTAUTH_URL || getBaseUrl(),
-    NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET || 'development-secret-key',
+    NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET || undefined,
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
     GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || '',
-    D1_URL: process.env.D1_URL || 'https://api.cloudflare.com/client/v4/accounts/ACCOUNT_ID/d1/database/DATABASE_ID/query',
-    D1_DATABASE_ID: process.env.D1_DATABASE_ID || 'dev-database-id',
-    D1_API_KEY: process.env.D1_API_KEY || 'dev-api-key',
-    ADMIN_EMAILS: process.env.ADMIN_EMAILS || 'admin@example.com',
+    D1_URL: process.env.D1_URL || undefined,
+    D1_DATABASE_ID: process.env.D1_DATABASE_ID || undefined,
+    D1_API_KEY: process.env.D1_API_KEY || undefined,
+    ADMIN_EMAILS: process.env.ADMIN_EMAILS || undefined,
     VERCEL_URL: process.env.VERCEL_URL,
     VERCEL_ENV: process.env.VERCEL_ENV,
     // Phase 2 additions
-    MAILGUN_DOMAIN: process.env.MAILGUN_DOMAIN || 'example.com',
-    MAILGUN_API_KEY: process.env.MAILGUN_API_KEY || 'key-dev-key',
-    MAILGUN_EMAIL: process.env.MAILGUN_EMAIL || 'noreply@example.com',
-    OPENAI_API_KEY: process.env.OPENAI_API_KEY || 'sk-dev-key',
+    MAILGUN_DOMAIN: process.env.MAILGUN_DOMAIN || undefined,
+    MAILGUN_API_KEY: process.env.MAILGUN_API_KEY || undefined,
+    MAILGUN_EMAIL: process.env.MAILGUN_EMAIL || undefined,
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY || undefined,
     AIMLAPI_KEY: process.env.AIMLAPI_KEY,
     MAX_FILE_SIZE_MB: process.env.MAX_FILE_SIZE_MB,
     DOWNLOAD_TIMEOUT_SEC: process.env.DOWNLOAD_TIMEOUT_SEC,
@@ -162,12 +162,17 @@ export function getAudioProcessingConfig() {
  * @returns Mailgun config object
  */
 export function getMailgunConfig() {
+  const domain = process.env.MAILGUN_DOMAIN;
+  if (!domain) {
+    throw new Error('MAILGUN_DOMAIN is required');
+  }
+  
   return {
-    domain: process.env.MAILGUN_DOMAIN || 'example.com',
-    apiKey: process.env.MAILGUN_API_KEY || 'key-dev-key',
-    email: process.env.MAILGUN_EMAIL || `noreply@${process.env.MAILGUN_DOMAIN || 'example.com'}`,
-    apiUrl: `https://api.mailgun.net/v3/${process.env.MAILGUN_DOMAIN || 'example.com'}`,
-    webhookKey: process.env.MAILGUN_WEBHOOK_SIGNING_KEY || 'webhook-dev-key',
+    domain,
+    apiKey: process.env.MAILGUN_API_KEY || undefined,
+    email: process.env.MAILGUN_EMAIL || `noreply@${domain}`,
+    apiUrl: `https://api.mailgun.net/v3/${domain}`,
+    webhookKey: process.env.MAILGUN_WEBHOOK_SIGNING_KEY || undefined,
   };
 }
 
@@ -177,7 +182,7 @@ export function getMailgunConfig() {
  */
 export function getOpenAIConfig() {
   return {
-    apiKey: process.env.OPENAI_API_KEY || 'sk-dev-key',
+    apiKey: process.env.OPENAI_API_KEY || undefined,
     apiUrl: 'https://api.openai.com/v1',
   };
 } 

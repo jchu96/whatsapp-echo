@@ -45,7 +45,7 @@ Built as a production-ready Next.js 14 application with Google authentication, C
 
 **Privacy-First Architecture**: Zero transcript content logging, in-memory-only audio processing, and no persistent storage of voice data. All transcript content is delivered directly via email without being stored on servers, ensuring maximum privacy protection for sensitive voice communications.
 
-📋 **[Complete Architecture Documentation](docs/architecture.md)** - Detailed system architecture, component interactions, data flows, and operational considerations.
+📋 **[Complete Architecture Documentation](ARCHITECTURE.md)** - Detailed system architecture, component interactions, data flows, and operational considerations.
 
 ## 🎯 Project Status: PRODUCTION READY ✅
 
@@ -699,8 +699,8 @@ For detailed information about specific aspects of the system:
 
 - **[Security Policy](SECURITY.md)** - Comprehensive security measures, privacy guarantees, and vulnerability reporting
 - **[User Manual](docs/USER_MANUAL.md)** - Complete end-user guide for signup, workflow, and usage
-- **[Deployment Guide](docs/DEPLOYMENT.md)** - Complete deployment and configuration instructions
-- **[Webhook Optimization](docs/WEBHOOK_OPTIMIZATION.md)** - FormData simplification and performance improvements
+- **[Deployment Guide](docs/DEPLOYMENT.md)** - Complete deployment and configuration instructions 
+improvements
 
 ## 📝 License
 
