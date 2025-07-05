@@ -5,106 +5,7 @@ import { updateVoiceEvent } from '@/lib/database';
 import { BackgroundProcessingMetadata, EnhancedEmailData, EnhancementType, EnhancementProcessingResult } from '@/types';
 import { fastTranscribeAudio, cleanTranscription } from '@/lib/whisper';
 
-/**
- * Process voice note in the background with multiple enhancement types
- * @param audioFile - Audio file to process
- * @param metadata - Processing metadata with array of enhancement types
- */
-export async function processVoiceNoteBackground(
-  audioFile: File,
-  metadata: BackgroundProcessingMetadata
-): Promise<void> {
-  console.log(`🔄 [BACKGROUND] Starting enhancements processing for event ${metadata.eventId}:`, metadata.enhancementTypes);
-  
-  try {
-    // Step 1: Transcribe audio with Whisper (only once)
-    console.log('🎤 [BACKGROUND] Transcribing audio...');
-    const transcription = await fastTranscribeAudio(audioFile, 45000); // 45 second timeout
 
-    if (!transcription.text?.trim()) {
-      throw new Error('Empty transcription result');
-    }
-
-    console.log('🎤 [BACKGROUND] Transcription completed:', {
-      textLength: transcription.text.length,
-      duration: transcription.duration,
-      enhancementTypes: metadata.enhancementTypes
-    });
-
-    // Step 2: Process each enhancement type
-    const enhancementResults: EnhancementProcessingResult[] = [];
-    
-    for (const enhancementType of metadata.enhancementTypes) {
-      try {
-        console.log(`🤖 [BACKGROUND] Processing ${enhancementType} enhancement...`);
-        const enhancedContent = await enhanceTranscript(transcription.text, enhancementType);
-        
-        console.log(`📧 [BACKGROUND] Sending ${enhancementType} email...`);
-        await sendEnhancedEmail(metadata.userEmail, {
-          originalTranscript: transcription.text,
-          enhancedContent,
-          processingType: enhancementType,
-          filename: metadata.filename
-        });
-        
-        enhancementResults.push({
-          type: enhancementType,
-          success: true,
-          content: enhancedContent
-        });
-        
-        console.log(`✅ [BACKGROUND] ${enhancementType} enhancement completed successfully`);
-        
-      } catch (enhancementError) {
-        console.error(`❌ [BACKGROUND] ${enhancementType} enhancement failed:`, enhancementError);
-        
-        enhancementResults.push({
-          type: enhancementType,
-          success: false,
-          error: enhancementError instanceof Error ? enhancementError.message : 'Unknown enhancement error'
-        });
-      }
-    }
-
-    // Step 3: Update database with overall status
-    const successfulEnhancements = enhancementResults.filter(r => r.success);
-    const failedEnhancements = enhancementResults.filter(r => !r.success);
-    
-    if (successfulEnhancements.length > 0) {
-      const statusMessage = failedEnhancements.length > 0 
-        ? `Partial success: ${successfulEnhancements.length}/${enhancementResults.length} enhancements completed`
-        : 'All enhancements completed successfully';
-        
-      await updateVoiceEvent(metadata.eventId, {
-        status: 'completed',
-        completed_at: new Date(),
-        error_message: failedEnhancements.length > 0 ? 
-          `Some enhancements failed: ${failedEnhancements.map(f => f.type).join(', ')}` : undefined
-      });
-      
-      console.log(`✅ [BACKGROUND] Enhancement processing completed for event ${metadata.eventId}: ${statusMessage}`);
-    } else {
-      // All enhancements failed
-      await updateVoiceEvent(metadata.eventId, {
-        status: 'failed',
-        error_message: `All enhancements failed: ${failedEnhancements.map(f => f.error).join('; ')}`
-      });
-      
-      console.log(`❌ [BACKGROUND] All enhancements failed for event ${metadata.eventId}`);
-    }
-
-  } catch (error) {
-    console.error(`❌ [BACKGROUND] Critical processing failure for event ${metadata.eventId}:`, error);
-    
-    // Total failure - update database with error
-    await updateVoiceEvent(metadata.eventId, {
-      status: 'failed',
-      error_message: error instanceof Error ? error.message : 'Critical processing error'
-    });
-    
-    throw error;
-  }
-}
 
 /**
  * Enhanced prompts with better structure and hallucination guards
@@ -212,14 +113,21 @@ async function enhanceTranscript(transcript: string, processingType: Enhancement
   
   try {
     console.log(`🤖 [BACKGROUND] Calling OpenAI for ${processingType} enhancement...`);
+    console.log(`🤖 [BACKGROUND] OpenAI config:`, {
+      hasApiKey: !!config.apiKey,
+      apiKeyPrefix: config.apiKey?.substring(0, 10) + '...',
+      apiUrl: config.apiUrl,
+      transcriptLength: transcript.length
+    });
     
     const openai = new OpenAI({
       apiKey: config.apiKey,
       baseURL: config.apiUrl,
     });
 
+    console.log(`🤖 [BACKGROUND] Making OpenAI API request for ${processingType}...`);
     const response = await openai.chat.completions.create({
-      model: 'openai/gpt-4.1-nano-2025-04-14',
+      model: 'gpt-4.1-nano',
       messages: [
         { role: 'system', content: prompt.system },
         { role: 'user', content: `<TRANSCRIPT>\n${transcript}\n</TRANSCRIPT>` }
@@ -229,9 +137,17 @@ async function enhanceTranscript(transcript: string, processingType: Enhancement
       max_tokens: prompt.maxTokens
     });
 
+    console.log(`🤖 [BACKGROUND] OpenAI API response received for ${processingType}:`, {
+      hasResponse: !!response,
+      hasChoices: !!response.choices,
+      choicesLength: response.choices?.length || 0,
+      hasContent: !!response.choices?.[0]?.message?.content
+    });
+
     let enhancedText = response.choices[0].message.content;
     
     if (!enhancedText) {
+      console.error(`❌ [BACKGROUND] Empty response from LLM for ${processingType}`);
       throw new Error('Empty response from LLM');
     }
 
@@ -259,9 +175,20 @@ async function enhanceTranscript(transcript: string, processingType: Enhancement
     return enhancedText;
     
   } catch (llmError) {
-    console.error('❌ [BACKGROUND] LLM enhancement failed:', llmError);
+    console.error(`❌ [BACKGROUND] LLM enhancement failed for ${processingType}:`, llmError);
+    console.error(`❌ [BACKGROUND] Error details:`, {
+      errorMessage: llmError instanceof Error ? llmError.message : String(llmError),
+      errorStack: llmError instanceof Error ? llmError.stack : 'No stack trace',
+      errorType: llmError instanceof Error ? llmError.constructor.name : typeof llmError,
+      transcriptLength: transcript.length,
+      processingType,
+      configApiUrl: config.apiUrl,
+      hasApiKey: !!config.apiKey
+    });
+    
     const error = new Error(`LLM processing failed: ${llmError instanceof Error ? llmError.message : 'Unknown error'}`);
-    (error as any).transcript = transcript; // Attach original transcript for fallback
+    (error as any).transcriptLength = transcript.length; // Only store length for debugging, not content
+    (error as any).processingType = processingType; // Store processing type for debugging
     throw error;
   }
 }
@@ -335,24 +262,167 @@ ${data.originalTranscript}
   console.log('📧 [BACKGROUND] Enhanced email sent successfully');
 }
 
+
+
 /**
- * Queue background processing job
- * This is a placeholder for future queue implementation
- * For now, it processes immediately
+ * Process enhancements using an existing transcript (no re-transcription needed)
+ * @param transcript - The transcript text to enhance
+ * @param metadata - Processing metadata
  */
-export async function queueVoiceProcessing(
-  audioFile: File,
+export async function processEnhancementsWithTranscript(
+  transcript: string,
   metadata: BackgroundProcessingMetadata
 ): Promise<void> {
-  console.log('🔄 [BACKGROUND] Queuing voice processing job:', {
-    eventId: metadata.eventId,
-    enhancementTypes: metadata.enhancementTypes,
-    filename: metadata.filename
-  });
+  console.log(`🔄 [BACKGROUND] Starting enhancements processing for event ${metadata.eventId}:`, metadata.enhancementTypes);
   
-  // For now, process immediately
-  // In production, you might want to use a proper queue like Bull/BullMQ
-  await processVoiceNoteBackground(audioFile, metadata);
+  try {
+    console.log('🎤 [BACKGROUND] Using provided transcript:', {
+      textLength: transcript.length,
+      enhancementTypes: metadata.enhancementTypes
+    });
+
+    // 🔥 NEW: Update database to track enhancement start
+    console.log('💾 [BACKGROUND] Updating database: enhancement processing started');
+    await updateVoiceEvent(metadata.eventId, {
+      status: 'processing',
+      error_message: 'Enhancement processing started'
+    });
+    console.log('✅ [BACKGROUND] Database updated: enhancement processing started');
+
+    // Step 1: Process each enhancement type
+    const enhancementResults: EnhancementProcessingResult[] = [];
+    
+    for (const enhancementType of metadata.enhancementTypes) {
+      try {
+        // 🔥 NEW: Update database for each enhancement start
+        console.log(`💾 [BACKGROUND] Updating database: starting ${enhancementType}`);
+        await updateVoiceEvent(metadata.eventId, {
+          status: 'processing',
+          error_message: `Processing ${enhancementType} enhancement`
+        });
+        console.log(`✅ [BACKGROUND] Database updated: processing ${enhancementType}`);
+        
+        console.log(`🤖 [BACKGROUND] Processing ${enhancementType} enhancement...`);
+        const enhancedContent = await enhanceTranscript(transcript, enhancementType);
+        
+        // 🔥 NEW: Update database for each enhancement success
+        console.log(`💾 [BACKGROUND] Updating database: ${enhancementType} completed`);
+        await updateVoiceEvent(metadata.eventId, {
+          status: 'processing',
+          error_message: `${enhancementType} completed, continuing with remaining enhancements`
+        });
+        console.log(`✅ [BACKGROUND] Database updated: ${enhancementType} completed`);
+        
+        console.log(`📧 [BACKGROUND] Sending ${enhancementType} email...`);
+        await sendEnhancedEmail(metadata.userEmail, {
+          originalTranscript: transcript,
+          enhancedContent,
+          processingType: enhancementType,
+          filename: metadata.filename
+        });
+        
+        enhancementResults.push({
+          type: enhancementType,
+          success: true,
+          content: enhancedContent
+        });
+        
+        console.log(`✅ [BACKGROUND] ${enhancementType} enhancement completed successfully`);
+        
+      } catch (enhancementError) {
+        console.error(`❌ [BACKGROUND] ${enhancementType} enhancement failed:`, enhancementError);
+        console.error(`❌ [BACKGROUND] ${enhancementType} enhancement error details:`, {
+          errorMessage: enhancementError instanceof Error ? enhancementError.message : String(enhancementError),
+          errorStack: enhancementError instanceof Error ? enhancementError.stack : 'No stack trace',
+          errorType: enhancementError instanceof Error ? enhancementError.constructor.name : typeof enhancementError,
+          enhancementType,
+          transcriptLength: transcript.length,
+          userEmail: metadata.userEmail,
+          filename: metadata.filename
+        });
+        
+        // 🔥 NEW: Update database for each enhancement failure
+        const errorMessage = `${enhancementType} failed: ${enhancementError instanceof Error ? enhancementError.message : String(enhancementError)}`;
+        console.log(`💾 [BACKGROUND] Updating database: ${enhancementType} failed - ${errorMessage}`);
+        await updateVoiceEvent(metadata.eventId, {
+          status: 'processing',
+          error_message: errorMessage
+        });
+        console.log(`✅ [BACKGROUND] Database updated: ${enhancementType} failed`);
+        
+        enhancementResults.push({
+          type: enhancementType,
+          success: false,
+          error: enhancementError instanceof Error ? enhancementError.message : 'Unknown enhancement error'
+        });
+      }
+    }
+
+    // Step 2: Update database with overall status
+    const successfulEnhancements = enhancementResults.filter(r => r.success);
+    const failedEnhancements = enhancementResults.filter(r => !r.success);
+    
+    console.log(`📊 [BACKGROUND] Enhancement processing summary for event ${metadata.eventId}:`, {
+      totalEnhancements: enhancementResults.length,
+      successful: successfulEnhancements.length,
+      failed: failedEnhancements.length,
+      results: enhancementResults.map(r => ({ type: r.type, success: r.success, hasContent: !!r.content, error: r.error }))
+    });
+    
+    if (successfulEnhancements.length > 0) {
+      const statusMessage = failedEnhancements.length > 0 
+        ? `Partial success: ${successfulEnhancements.length}/${enhancementResults.length} enhancements completed`
+        : 'All enhancements completed successfully';
+      
+      const finalStatus = failedEnhancements.length > 0 ? 'failed' : 'completed';
+      const finalErrorMessage = failedEnhancements.length > 0 ? 
+        `Some enhancements failed: ${failedEnhancements.map(f => f.type).join(', ')}` : undefined;
+        
+      console.log(`💾 [BACKGROUND] Updating database with final status: ${finalStatus}`);
+      await updateVoiceEvent(metadata.eventId, {
+        status: finalStatus,
+        completed_at: new Date(),
+        error_message: finalErrorMessage
+      });
+      
+      console.log(`✅ [BACKGROUND] Enhancement processing completed for event ${metadata.eventId}: ${statusMessage}`);
+    } else {
+      // All enhancements failed
+      console.log(`💾 [BACKGROUND] Updating database with failure status for event ${metadata.eventId}...`);
+      await updateVoiceEvent(metadata.eventId, {
+        status: 'failed',
+        error_message: `All enhancements failed: ${failedEnhancements.map(f => f.error).join('; ')}`
+      });
+      
+      console.log(`❌ [BACKGROUND] All enhancements failed for event ${metadata.eventId}`);
+    }
+
+  } catch (error) {
+    console.error(`❌ [BACKGROUND] Critical enhancement processing failure for event ${metadata.eventId}:`, error);
+    console.error(`❌ [BACKGROUND] Critical error details:`, {
+      errorMessage: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : 'No stack trace',
+      errorType: error instanceof Error ? error.constructor.name : typeof error,
+      eventId: metadata.eventId,
+      userEmail: metadata.userEmail,
+      enhancementTypes: metadata.enhancementTypes,
+      transcriptLength: transcript.length
+    });
+    
+    // 🔥 NEW: Update database with critical failure
+    console.log(`💾 [BACKGROUND] Updating database with critical failure for event ${metadata.eventId}...`);
+    try {
+      await updateVoiceEvent(metadata.eventId, {
+        status: 'failed',
+        error_message: error instanceof Error ? error.message : 'Critical enhancement processing error'
+      });
+      console.log(`✅ [BACKGROUND] Database updated with critical failure status for event ${metadata.eventId}`);
+    } catch (dbError) {
+      console.error(`❌ [BACKGROUND] Failed to update database with error status for event ${metadata.eventId}:`, dbError);
+    }
+    
+    throw error;
+  }
 }
 
 /**

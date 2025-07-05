@@ -213,6 +213,7 @@ export interface BackgroundProcessingMetadata {
   filename: string;
   duration?: number;
   fileSize?: number;
+  transcript?: string; // Optional transcript text for enhancement processing
 }
 
 export interface EnhancedEmailData {

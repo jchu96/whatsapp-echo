@@ -28,6 +28,7 @@ export async function middleware(request: NextRequest) {
     // Check each condition individually for debugging
     const isApiAuth = pathname.startsWith('/api/auth');
     const isApiInbound = pathname.startsWith('/api/inbound');
+    const isApiBackground = pathname.startsWith('/api/background');
     const isNext = pathname.startsWith('/_next');
     const isFavicon = pathname.startsWith('/favicon.ico');
     const isSignin = pathname === '/auth/signin';
@@ -37,6 +38,7 @@ export async function middleware(request: NextRequest) {
     console.log('🔍 [MIDDLEWARE] Condition checks:', {
       isApiAuth,
       isApiInbound,
+      isApiBackground,
       isNext,
       isFavicon,
       isSignin,
@@ -45,7 +47,7 @@ export async function middleware(request: NextRequest) {
     });
 
     // Skip middleware for auth routes, static files, and API routes that don't need protection
-    if (isApiAuth || isApiInbound || isNext || isFavicon || isSignin || isError || isApprovalPending) {
+    if (isApiAuth || isApiInbound || isApiBackground || isNext || isFavicon || isSignin || isError || isApprovalPending) {
       console.log('🔍 [MIDDLEWARE] Skipping middleware for:', pathname);
       return NextResponse.next();
     }

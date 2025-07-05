@@ -1,7 +1,7 @@
 
  ⛅️ wrangler 4.22.0 (update available 4.23.0)
 ─────────────────────────────────────────────
-🌀 Executing on remote database voice-transcription-db (3a4b216e-4a33-401c-8225-0f377ae1e149):
+🌀 Executing on remote database: [DATABASE_NAME]
 🌀 To execute on your local development database, remove the --remote flag from your wrangler command.
 🚣 Executed 1 command in 0.3446ms
 [

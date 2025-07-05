@@ -24,7 +24,7 @@ import {
 } from '@/lib/enhanced-errors';
 import { getAudioProcessingConfig } from '@/utils/env';
 import { AudioFile, ProcessingContext, TimeoutErrorType, BackgroundProcessingMetadata } from '@/types';
-import { queueVoiceProcessing, requiresBackgroundProcessing } from '@/lib/voice-processor';
+import { requiresBackgroundProcessing } from '@/lib/voice-processor';
 
 // TypeScript interface for Mailgun webhook data
 interface MailgunWebhookData {
@@ -446,19 +446,20 @@ export async function POST(request: NextRequest) {
     let enhancementEventId: string | null = null;
     let enhancementStatus = 'none';
     
-    if (requestedEnhancements.length > 0) {
+    if (requestedEnhancements.length > 0 && result.transcript) {
       try {
         console.log('🔄 [INBOUND] Queuing background enhancements:', requestedEnhancements);
+        console.log('🔄 [INBOUND] Using transcript from raw processing (no re-transcription needed)');
         
-                 // Create voice event for enhancement tracking
-         enhancementEventId = await insertVoiceEventAndGetId({
-           user_id: user.id,
-           duration_sec: undefined, // Will be filled by background processor
-           bytes: audioFile.size,
-           status: 'processing',
-           processing_type: 'cleanup', // Will be updated by background processor based on actual enhancements
-           enhancements_requested: serializeEnhancements(requestedEnhancements)
-         });
+        // Create voice event for enhancement tracking
+        enhancementEventId = await insertVoiceEventAndGetId({
+          user_id: user.id,
+          duration_sec: result.duration,
+          bytes: audioFile.size,
+          status: 'processing',
+          processing_type: 'cleanup', // Will be updated by background processor based on actual enhancements
+          enhancements_requested: serializeEnhancements(requestedEnhancements)
+        });
         
         console.log('💾 [INBOUND] Enhancement event created:', {
           enhancementEventId,
@@ -466,18 +467,32 @@ export async function POST(request: NextRequest) {
           userId: user.id
         });
         
-        // Create background processing metadata
+        // Create background processing metadata with transcript from raw processing
         const enhancementMetadata: BackgroundProcessingMetadata = {
           userId: user.id,
           userEmail: user.google_email,
           eventId: enhancementEventId,
           enhancementTypes: requestedEnhancements,
           filename: audioFile.name,
-          fileSize: audioFile.size
+          fileSize: audioFile.size,
+          transcript: result.transcript // Pass transcript from raw processing
         };
         
-        // Queue for background processing (currently processes immediately)
-        queueVoiceProcessing(audioFile, enhancementMetadata).catch(enhancementError => {
+        // Queue for background processing in separate serverless function
+        const crypto = require('crypto');
+        const authToken = crypto
+          .createHash('sha256')
+          .update(process.env.NEXTAUTH_SECRET || '')
+          .digest('hex');
+
+        fetch(`${request.url.replace('/api/inbound', '/api/background/enhance-transcript')}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
+          body: JSON.stringify(enhancementMetadata)
+        }).catch((enhancementError: Error) => {
           console.error('❌ [INBOUND] Enhancement processing failed asynchronously:', enhancementError);
           // Don't await this - let it fail in background without affecting response
         });
@@ -501,6 +516,9 @@ export async function POST(request: NextRequest) {
           }
         });
       }
+    } else if (requestedEnhancements.length > 0) {
+      console.error('❌ [INBOUND] Enhancements requested but no transcript available from raw processing');
+      enhancementStatus = 'failed';
     } else {
       console.log('ℹ️ [INBOUND] No enhancements requested, raw transcript only');
     }
@@ -597,13 +615,13 @@ export async function POST(request: NextRequest) {
  * @param audioFile - Audio file to process
  * @param context - Processing context
  * @param metricsTracker - Metrics tracker
- * @returns Processing result
+ * @returns Processing result with transcript and duration
  */
 async function processVoiceNote(
   audioFile: File, 
   context: ProcessingContext,
   metricsTracker: any
-): Promise<{ success: boolean; error?: string; errorType?: TimeoutErrorType }> {
+): Promise<{ success: boolean; error?: string; errorType?: TimeoutErrorType; transcript?: string; duration?: number }> {
   
   console.log('🔍 [PROCESS] Starting processVoiceNote with File object:', {
     name: audioFile.name,
@@ -703,7 +721,7 @@ async function processVoiceNote(
       duration: transcriptionResult?.duration,
       textLength: transcriptionResult?.text?.length || 0,
       hasText: !!transcriptionResult?.text,
-      firstChars: transcriptionResult?.text?.substring(0, 100) + (transcriptionResult?.text?.length > 100 ? '...' : '')
+      // firstChars removed for privacy - transcript content is never logged
     });
     
     const cleanedTranscript = cleanTranscription(transcriptionResult.text);
@@ -783,7 +801,11 @@ async function processVoiceNote(
     metricsTracker.endPhase();
     console.log('✅ [PROCESS] All phases completed successfully');
     
-    return { success: true };
+    return { 
+      success: true,
+      transcript: cleanedTranscript,
+      duration: transcriptionResult.duration
+    };
     
   } catch (error) {
     console.error('❌ [PROCESS] Voice note processing error:', error);
@@ -804,7 +826,7 @@ async function processVoiceNote(
     return { 
       success: false, 
       error: errorMessage, 
-      errorType 
+      errorType
     };
   }
 }

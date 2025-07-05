@@ -40,7 +40,7 @@ export default function Page() {
         </h1>
 
         <p className="description">
-          Click the button below, and view the sample error on the Sentry <a target="_blank" href="https://flicker-ventures.sentry.io/issues/?project=4509611008262144">Issues Page</a>.
+          Click the button below, and view the sample error on the Sentry Issues Page (check your Sentry dashboard).
           For more details about setting up Sentry, <a target="_blank"
            href="https://docs.sentry.io/platforms/javascript/guides/nextjs/">read our docs</a>.
         </p>

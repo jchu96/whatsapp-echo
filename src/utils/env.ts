@@ -172,12 +172,12 @@ export function getMailgunConfig() {
 }
 
 /**
- * Get OpenAI configuration for AI/ML API
+ * Get OpenAI configuration for direct OpenAI API
  * @returns OpenAI config object
  */
 export function getOpenAIConfig() {
   return {
-    apiKey: process.env.AIMLAPI_KEY || process.env.OPENAI_API_KEY || 'sk-dev-key',
-    apiUrl: 'https://api.aimlapi.com/v1',
+    apiKey: process.env.OPENAI_API_KEY || 'sk-dev-key',
+    apiUrl: 'https://api.openai.com/v1',
   };
 } 

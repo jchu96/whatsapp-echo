@@ -1,0 +1,13 @@
+name = "voice-transcription-db"
+compatibility_date = "2024-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "voice-transcription-db"
+database_id = "XX"
+
+# For development/testing
+[[d1_databases]]
+binding = "DB_DEV"
+database_name = "voice-transcription-db"
+database_id = "XX"

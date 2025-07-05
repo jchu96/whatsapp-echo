@@ -112,6 +112,33 @@ export default async function HomePage() {
           </div>
         </div>
 
+        {/* GitHub Section */}
+        <div className="mb-16">
+          <div className="flex flex-col items-center justify-center space-y-4">
+            <div className="flex items-center space-x-3 group">
+              <div className="relative w-8 h-8 transform group-hover:scale-110 transition-transform duration-200">
+                <Image
+                  src="/images/github.png"
+                  alt="GitHub"
+                  fill
+                  className="object-contain"
+                />
+              </div>
+              <a
+                href="https://github.com/jchu96/whatsapp-echo"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-gray-600 hover:text-gray-800 transition-colors duration-200 hover:underline"
+              >
+                Open Source on GitHub
+              </a>
+            </div>
+            <p className="text-xs text-gray-500 text-center">
+              This project is open source and available on GitHub
+            </p>
+          </div>
+        </div>
+
         {/* Overview Section */}
         <div className="max-w-4xl mx-auto mb-16 transform hover:scale-[1.01] transition-transform duration-300">
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-8 md:p-12 border border-gray-100">
@@ -201,6 +228,97 @@ export default async function HomePage() {
                 <div className="w-2 h-2 bg-blue-500 rounded-full group-hover:scale-150 transition-transform duration-200"></div>
                 <span className="text-gray-700">Keeping searchable records of discussions</span>
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Privacy Section */}
+        <div className="max-w-4xl mx-auto mb-16 transform hover:scale-[1.01] transition-transform duration-300">
+          <div className="bg-gradient-to-br from-green-50 to-emerald-50 backdrop-blur-sm rounded-2xl shadow-xl p-8 md:p-12 border border-green-200">
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
+                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+              <h2 className="text-3xl font-bold mb-4 text-gray-900">Privacy-First by Design</h2>
+              <p className="text-lg text-gray-700 leading-relaxed max-w-2xl mx-auto">
+                Your voice notes are private. We built this service with privacy as the foundation, not an afterthought.
+              </p>
+            </div>
+            
+            <div className="grid md:grid-cols-2 gap-8">
+              <div className="space-y-6">
+                <div className="group flex items-start space-x-4 hover:transform hover:translate-x-1 transition-transform duration-200">
+                  <div className="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                    <span className="text-green-600 font-bold">🚫</span>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-2">Zero Content Logging</h3>
+                    <p className="text-gray-600 text-sm">Your transcript content is NEVER logged to our servers, files, or monitoring systems. We only track technical metadata like file size and processing time.</p>
+                  </div>
+                </div>
+                
+                <div className="group flex items-start space-x-4 hover:transform hover:translate-x-1 transition-transform duration-200">
+                  <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                    <span className="text-blue-600 font-bold">🧠</span>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-2">Memory-Only Processing</h3>
+                    <p className="text-gray-600 text-sm">Audio files are processed entirely in computer memory—never written to disk. Once transcribed and emailed, everything is automatically discarded.</p>
+                  </div>
+                </div>
+                
+                <div className="group flex items-start space-x-4 hover:transform hover:translate-x-1 transition-transform duration-200">
+                  <div className="flex-shrink-0 w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                    <span className="text-purple-600 font-bold">💾</span>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-2">No Data Storage</h3>
+                    <p className="text-gray-600 text-sm">Voice transcripts are not stored in our database. We only keep processing metadata (duration, file size, timestamps) for system analytics.</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-6">
+                <div className="group flex items-start space-x-4 hover:transform hover:translate-x-1 transition-transform duration-200">
+                  <div className="flex-shrink-0 w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                    <span className="text-orange-600 font-bold">📧</span>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-2">Direct Email Delivery</h3>
+                    <p className="text-gray-600 text-sm">Transcripts are delivered straight to your email inbox. No cloud storage, no databases, no intermediate steps where your data could be compromised.</p>
+                  </div>
+                </div>
+                
+                <div className="group flex items-start space-x-4 hover:transform hover:translate-x-1 transition-transform duration-200">
+                  <div className="flex-shrink-0 w-8 h-8 bg-red-100 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                    <span className="text-red-600 font-bold">🛡️</span>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-2">Error-Safe Design</h3>
+                    <p className="text-gray-600 text-sm">Even when errors occur, only technical metadata is captured—never your voice content. Privacy protection extends to all error handling and monitoring.</p>
+                  </div>
+                </div>
+                
+                <div className="group flex items-start space-x-4 hover:transform hover:translate-x-1 transition-transform duration-200">
+                  <div className="flex-shrink-0 w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                    <span className="text-indigo-600 font-bold">⚡</span>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-2">Instant Deletion</h3>
+                    <p className="text-gray-600 text-sm">Audio files and transcript content are automatically deleted from our systems immediately after email delivery. Nothing lingers.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-8 p-6 bg-white/60 backdrop-blur-sm rounded-xl border border-green-200">
+              <h3 className="font-bold text-lg text-gray-900 mb-3 text-center">Our Privacy Promise</h3>
+              <p className="text-gray-700 text-center leading-relaxed">
+                We designed this service from the ground up to <strong>never see your voice content</strong>. 
+                Your conversations stay between you and your recipients—we're just the private, secure pipeline that gets your words to text.
+              </p>
             </div>
           </div>
         </div>

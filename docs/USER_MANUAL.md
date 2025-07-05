@@ -32,7 +32,7 @@ This service automatically transcribes voice notes that you send via email. Simp
 
 ### Step 1: Access the Service
 
-1. Visit the service website: https://echo.flickerventures.com
+1. Visit the service website
 2. Click the **"Sign In"** button in the top right corner
 3. Choose **"Sign in with Google"**
 
@@ -54,7 +54,7 @@ This service automatically transcribes voice notes that you send via email. Simp
 
 1. Once approved, log back into the service
 2. Visit your **Dashboard** to see your personal email address
-3. Your address will look like: `abc123@echo.flickerventures.com
+3. Your address will look like: `abc123@yourdomain.com
 4. This is your unique address for sending voice notes
 
 ## 🔄 How It Works
@@ -75,7 +75,7 @@ This service automatically transcribes voice notes that you send via email. Simp
 2. **Send via Email**
    - Create a new email
    - Attach your audio file
-   - Send to your personal address (e.g., `abc123@echo.flickerventures.com`)
+   - Send to your personal address (e.g., `abc123@yourdomain.com`)
    - Subject line and body text are optional
 
 3. **Automatic Processing**
@@ -101,7 +101,7 @@ This service automatically transcribes voice notes that you send via email. Simp
 ### How to Send Voice Notes
 
 1. **Create a new email** in your email app
-2. **To**: Your personal address (e.g., `abc123@echo.flickerventures.com`)
+2. **To**: Your personal address (e.g., `abc123@yourdomain.com`)
 3. **Subject**: Optional - can be anything or left blank
 4. **Body**: Optional - can include notes or context
 5. **Attach**: Your audio file (M4A, MP3, WAV, OGG, AAC, FLAC)

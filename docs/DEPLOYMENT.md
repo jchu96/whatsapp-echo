@@ -229,7 +229,7 @@ openssl rand -base64 32
 curl -I https://your-domain.vercel.app
 
 # Test rate limiting
-for i in {1..110}; do curl https://your-domain.vercel.app/api/test; done
+for i in {1..110}; do curl https://your-domain.vercel.app/api/inbound; done
 ```
 
 ## 📊 Monitoring & Maintenance

@@ -66,7 +66,7 @@ const EMAIL_TEMPLATES = {
         <p>Please review and approve this user in the admin dashboard.</p>
         
         <div style="margin: 20px 0;">
-          <a href="${process.env.NEXTAUTH_URL || 'https://echo.flickerventures.com'}/admin" 
+          <a href="${process.env.NEXTAUTH_URL}/admin" 
              style="background: #3498db; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
             Go to Admin Dashboard
           </a>
@@ -95,7 +95,7 @@ const EMAIL_TEMPLATES = {
         ${isApproved ? `
           <p>You can now send voice notes to your personal email address. Visit your dashboard to get started.</p>
           <div style="margin: 20px 0;">
-            <a href="${process.env.NEXTAUTH_URL || 'https://echo.flickerventures.com'}/dashboard" 
+            <a href="${process.env.NEXTAUTH_URL}/dashboard" 
                style="background: #27ae60; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
               Go to Dashboard
             </a>
