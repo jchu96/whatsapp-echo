@@ -1,5 +1,7 @@
+// @ts-ignore
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+// @ts-ignore
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
