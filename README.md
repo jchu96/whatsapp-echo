@@ -224,7 +224,8 @@ src/
 │       ├── button.tsx                  # Interactive buttons
 │       ├── card.tsx                    # Content containers
 │       ├── input.tsx                   # Form inputs
-│       └── table.tsx                   # Data tables
+│       ├── table.tsx                   # Data tables
+│       └── version-badge.tsx           # Version display badge component
 ├── lib/
 │   ├── audio.ts                        # Audio processing utilities
 │   ├── auth.ts                         # NextAuth configuration
@@ -236,6 +237,7 @@ src/
 │   ├── rate-limit.ts                   # In-memory rate limiting
 │   ├── security.ts                     # Security middleware
 │   ├── utils.ts                        # Utility functions
+│   ├── version.ts                      # Version utilities and centralized version management
 │   ├── voice-processor.ts              # Background enhancement processing
 │   └── whisper.ts                      # OpenAI Whisper integration
 ├── types/

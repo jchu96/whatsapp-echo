@@ -11,8 +11,19 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      {/* Friends & Family Banner */}
+      <div className="bg-blue-50 border-b border-blue-200 px-4 py-2">
+        <div className="max-w-4xl mx-auto text-center">
+          <p className="text-sm text-blue-700">
+            <span className="mr-1">👋</span>
+            <span className="hidden sm:inline">Personal project for friends & family — interested in trying it? Just reach out to Jeremy!</span>
+            <span className="sm:hidden">Personal project for friends & family — reach out to Jeremy!</span>
+          </p>
+        </div>
+      </div>
+
       {/* Navigation Header */}
-      <header className="absolute top-0 right-0 z-20 p-4">
+      <header className="absolute top-12 right-0 z-20 p-4">
         <div className="flex items-center space-x-4">
           {session ? (
             <Button asChild variant="ghost">
@@ -428,11 +439,15 @@ export default async function HomePage() {
           </div>
         </div>
 
-        {/* Admin Note - Updated */}
-        <div className="text-center">
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 max-w-md mx-auto transform hover:scale-[1.01] transition-transform duration-300">
-            <p className="text-sm text-yellow-800">
-              Contact Jeremy for access approval.
+        {/* Access Note */}
+        <div className="max-w-2xl mx-auto transform hover:scale-[1.01] transition-transform duration-300">
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-gray-100 text-center">
+            <div className="inline-flex items-center justify-center w-12 h-12 bg-blue-100 rounded-full mb-4">
+              <span className="text-blue-600 font-bold text-xl">👋</span>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Personal project for friends & family</h3>
+            <p className="text-gray-600">
+              Reach out to Jeremy for approval.
             </p>
           </div>
         </div>
