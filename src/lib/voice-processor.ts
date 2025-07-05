@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 import { getOpenAIConfig } from '@/utils/env';
-import { sendSuccessEmail } from '@/lib/mailgun';
+import { sendEnhancedEmail as sendEnhancedEmailFromMailgun } from '@/lib/mailgun';
 import { updateVoiceEvent } from '@/lib/database';
 import { BackgroundProcessingMetadata, EnhancedEmailData, EnhancementType, EnhancementProcessingResult } from '@/types';
 import { fastTranscribeAudio, cleanTranscription } from '@/lib/whisper';
@@ -111,11 +111,16 @@ async function enhanceTranscript(transcript: string, processingType: Enhancement
   const config = getOpenAIConfig();
   const prompt = prompts[processingType];
   
+  // Validate required configuration
+  if (!config.apiKey) {
+    throw new Error('OPENAI_API_KEY is not configured');
+  }
+  
   try {
     console.log(`🤖 [BACKGROUND] Calling OpenAI for ${processingType} enhancement...`);
     console.log(`🤖 [BACKGROUND] OpenAI config:`, {
-      hasApiKey: !!config.apiKey,
-      apiKeyPrefix: config.apiKey?.substring(0, 10) + '...',
+      hasApiKey: true,
+      apiKeyPrefix: config.apiKey.substring(0, 10) + '...',
       apiUrl: config.apiUrl,
       transcriptLength: transcript.length
     });
@@ -207,52 +212,16 @@ async function sendEnhancedEmail(userEmail: string, data: EnhancedEmailData): Pr
     enhancedLength: data.enhancedContent.length
   });
 
-  // Create enhanced filename with processing type indicator
-  const getProcessingLabel = (type: EnhancementType): string => {
-    switch (type) {
-      case 'cleanup': return 'Cleaned';
-      case 'summary': return 'Summary';
-      case 'quickSummary': return 'Quick Summary';
-      default: return 'Enhanced';
-    }
-  };
-
-  const getProcessingDescription = (type: EnhancementType): string => {
-    switch (type) {
-      case 'cleanup': return 'Grammar & formatting cleanup';
-      case 'summary': return 'Key points summary';
-      case 'quickSummary': return 'Quick summary';
-      default: return 'Enhanced transcript';
-    }
-  };
-
-  const enhancedFilename = `[${getProcessingLabel(data.processingType)}] ${data.filename}`;
+  console.log('📧 [BACKGROUND] Sending enhanced email with new template system');
   
-  // Create enhanced email content with clear labeling
-  const enhancedEmailContent = `Voice Note: ${data.filename}
-Processing: ${getProcessingLabel(data.processingType)}
-
-${getProcessingLabel(data.processingType)}:
-${data.enhancedContent}
-
----
-
-📋 Enhancement Details:
-• Processing Type: ${getProcessingDescription(data.processingType)}
-• Original Length: ${data.originalTranscript.length} characters
-• Enhanced Length: ${data.enhancedContent.length} characters
-• Processed: ${new Date().toLocaleString()}
-
-🎤 Original Transcript:
-${data.originalTranscript}
-  `.trim();
-
-  console.log('📧 [BACKGROUND] Sending enhanced email with existing sendSuccessEmail function');
-  
-  const emailSent = await sendSuccessEmail(
+  const emailSent = await sendEnhancedEmailFromMailgun(
     userEmail,
-    enhancedEmailContent,
-    enhancedFilename
+    {
+      originalTranscript: data.originalTranscript,
+      enhancedContent: data.enhancedContent,
+      processingType: data.processingType,
+      filename: data.filename
+    }
   );
 
   if (!emailSent) {

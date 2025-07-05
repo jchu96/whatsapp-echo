@@ -30,8 +30,15 @@ export async function executeQuery<T = any>(
   try {
     console.log('🔍 [DB] Executing query:', sql);
     console.log('🔍 [DB] Parameters:', params);
-    console.log('🔍 [DB] D1_URL:', config.D1_URL);
-    console.log('🔍 [DB] D1_API_KEY prefix:', config.D1_API_KEY?.substring(0, 10) + '...');
+    
+    // Validate required configuration
+    if (!config.D1_URL) {
+      throw new Error('D1_URL is not configured');
+    }
+    
+    if (!config.D1_API_KEY) {
+      throw new Error('D1_API_KEY is not configured');
+    }
     
     const response = await fetch(config.D1_URL, {
       method: 'POST',

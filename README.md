@@ -1,4 +1,18 @@
-# WhatsApp Voice Note Transcription 🎤→📝
+# Echo Scribe - Voice Note Transcription 🎤→📝
+
+**Version 1.01 – July 5, 2025**
+
+## 📝 Changelog
+
+### v1.01 (2025-07-05)
+- **Beautiful HTML Email Templates for Enhancements**: Enhanced emails (cleaned, summary, quick summary) now use modern, styled HTML templates for a much better reading experience.
+- **Markdown Rendering for Summaries**: Summaries and quick summaries are now delivered as formatted HTML, not plain text. Markdown is converted to HTML using the Showdown library.
+- **Showdown Integration**: Added Showdown for robust markdown-to-HTML conversion in all enhancement emails.
+- **New Markdown Utility**: Added `src/lib/markdown.ts` for reusable, secure markdown-to-HTML conversion across the codebase.
+- **Consistent Branding**: All enhancement emails now match the look and feel of other system emails.
+- **Improved User Experience**: Enhanced emails are easier to read, with clear sections, bullet points, and action items.
+
+---
 
 **Turn your voice notes into text in seconds, not minutes.**
 
@@ -43,6 +57,9 @@ Tired of listening to long voice messages? This service converts your WhatsApp v
 
 Built as a production-ready Next.js 14 application with Google authentication, Cloudflare D1 database, and OpenAI Whisper transcription. Features an innovative "Always Raw + Optional Enhancements" system, user preference management, comprehensive admin dashboard, and real-time voice processing optimized for Vercel deployment.
 
+**New in v1.01:**
+- The `src/lib/markdown.ts` utility provides secure, reusable markdown-to-HTML conversion for all enhancement emails, leveraging the Showdown library. This ensures summaries and quick summaries are delivered as beautiful, formatted HTML.
+
 **Privacy-First Architecture**: Zero transcript content logging, in-memory-only audio processing, and no persistent storage of voice data. All transcript content is delivered directly via email without being stored on servers, ensuring maximum privacy protection for sensitive voice communications.
 
 📋 **[Complete Architecture Documentation](ARCHITECTURE.md)** - Detailed system architecture, component interactions, data flows, and operational considerations.
@@ -77,7 +94,7 @@ Built as a production-ready Next.js 14 application with Google authentication, C
 ✅ **Phase 4 - User Preferences & Background Processing** (Complete)
 - "Always Raw + Optional Enhancements" processing system
 - User preference management with boolean enhancement flags
-- **Background processing with GPT-4o-mini** (cleanup & summary)
+- **Background processing with GPT-4.1 nano** (cleanup & summary)
 - **Secure token-based background API** with authentication
 - Multi-email delivery system (raw + enhanced versions)
 - RESTful preferences API with authentication
@@ -115,7 +132,7 @@ This setup provides excellent performance, cost efficiency, and leverages each p
 - 👥 **User Management**: Admin approval workflow with bulk operations
 - 🎤 **Smart Voice Processing**: Always-raw + optional enhancements system
 - ⚙️ **User Preferences**: Interactive preference management for enhancements
-- 🤖 **AI Enhancement**: GPT-4o-mini cleanup and summary processing
+- 🤖 **AI Enhancement**: GPT-4.1 nano cleanup and summary processing
 - 🔄 **Background Processing**: Secure token-based background enhancement API
 - 📧 **Multi-Email System**: Raw transcript + enhanced versions delivered separately
 - 📊 **Admin Dashboard**: Real-time user analytics and management
@@ -145,6 +162,7 @@ WhatsApp Echo is built with a **privacy-first design** that prioritizes user dat
 - **⚡ Rate Limiting**: Per-user and per-endpoint rate limiting with abuse prevention
 - **📋 Input Validation**: Comprehensive file type, size, and format validation
 - **🔒 Security Headers**: CSP, XSS protection, clickjacking prevention, HTTPS enforcement
+- **🤖 reCAPTCHA v2**: Contact form protection against automated abuse and spam bots
 
 ### What We DON'T Store
 - ❌ **Voice transcript content** - Never stored in database or logs
@@ -172,11 +190,19 @@ src/
 │   │   ├── admin/users/route.ts        # Admin user management API
 │   │   ├── auth/[...nextauth]/route.ts # NextAuth configuration
 │   │   ├── background/enhance-transcript/route.ts # Background enhancement API
+│   │   ├── config/privacy-email/route.ts # Privacy email configuration API
+│   │   ├── contact/route.ts            # Contact form API with reCAPTCHA verification
 │   │   ├── inbound/route.ts            # Smart webhook handler (always raw + enhancements)
 │   │   └── user/preferences/route.ts   # User preferences API
+│   ├── contact/
+│   │   └── page.tsx                    # Contact form page with reCAPTCHA v2 protection
 │   ├── dashboard/
 │   │   ├── page.tsx                    # User dashboard
 │   │   └── preferences/page.tsx        # User preferences management
+│   ├── privacy/
+│   │   └── page.tsx                    # Privacy Policy page with CCPA/CPRA compliance
+│   ├── terms/
+│   │   └── page.tsx                    # Terms of Service page with California law compliance
 │   ├── error.tsx                       # Global error page
 │   ├── not-found.tsx                   # 404 page
 │   ├── globals.css                     # Global styles
@@ -197,6 +223,7 @@ src/
 │   ├── database.ts                     # Database operations with preferences
 │   ├── errors.ts                       # Error handling system
 │   ├── mailgun.ts                      # Email processing
+│   ├── markdown.ts                     # Markdown-to-HTML conversion utility for enhancement emails
 │   ├── rate-limit.ts                   # In-memory rate limiting
 │   ├── security.ts                     # Security middleware
 │   ├── utils.ts                        # Utility functions
@@ -212,6 +239,15 @@ src/
 
 sql/
 └── schema.sql                          # Database schema
+
+public/
+├── legal/
+│   ├── TERMS_OF_SERVICE.md             # Terms of Service legal document (California law)
+│   └── PRIVACY_POLICY.md               # Privacy Policy legal document (CCPA/CPRA compliant)
+└── images/
+    ├── flickerventures.png             # Company logo
+    ├── github.png                      # GitHub icon
+    └── logo.png                        # Application logo
 
 Config Files:
 ├── package.json                        # Dependencies
@@ -332,7 +368,7 @@ D1_URL=https://api.cloudflare.com/client/v4/accounts/ACCOUNT_ID/d1/database/DATA
 D1_DATABASE_ID=your-database-id
 D1_API_KEY=your-api-key
 
-# OpenAI (Whisper + GPT-4o-mini)
+# OpenAI (Whisper + GPT-4.1 nano)
 OPENAI_API_KEY=sk-your-openai-key
 
 # Mailgun
@@ -342,6 +378,20 @@ MAILGUN_WEBHOOK_KEY=your-webhook-signing-key
 
 # Admin Users
 ADMIN_EMAILS=admin@yourdomain.com,admin2@yourdomain.com
+
+# reCAPTCHA v2 (Contact Form Protection)
+RECAPTCHA_SITE_KEY=your-recaptcha-site-key
+RECAPTCHA_SECRET_KEY=your-recaptcha-secret-key
+
+# Company Information (Legal Pages)
+PRIVACY_EMAIL=privacy@yourdomain.com
+EMAIL_SITE_CONTACT=hello@yourdomain.com
+COMPANY_NAME=Your Company
+COMPANY_ADDRESS=123 Main Street
+COMPANY_CITY=Los Angeles
+COMPANY_STATE=CA
+COMPANY_ZIP=90027
+COMPANY_FULL_ADDRESS=123 Main Street, Los Angeles, CA 90027
 ```
 
 ### 6. Vercel Deployment
@@ -419,7 +469,7 @@ This system is designed with **zero transcript logging** and **privacy-first pri
 
 ### User Preferences (`/dashboard/preferences`)
 - **Always Raw Processing**: Guaranteed immediate transcript delivery
-- **Optional Cleanup**: Grammar and formatting improvements with GPT-4o-mini
+- **Optional Cleanup**: Grammar and formatting improvements with GPT-4.1 nano
 - **Optional Summary**: Concise key points and action items
 - **Real-time Preview**: See exactly how many emails you'll receive
 - **Interactive Controls**: Toggle enhancements on/off with visual feedback
@@ -433,6 +483,7 @@ This system is designed with **zero transcript logging** and **privacy-first pri
 - **Privacy Protection**: Zero transcript logging, in-memory processing only
 - **Background API Security**: SHA256 token-based authentication for background processing
 - **Webhook Security**: Mailgun signature validation (implementation pending)
+- **reCAPTCHA v2**: Contact form protection against automated abuse and spam
 
 ### Performance Optimizations
 - **60-Second Timeout**: Optimized for Vercel Hobby tier
@@ -449,11 +500,11 @@ Email Received → Webhook Validation → User Lookup → Get User Preferences �
 File Validation → Audio Download → OpenAI Whisper Transcription (Raw) → 
 Database Logging (metadata only) → Raw Email Delivery (15-30s) → 
 Queue Background AI Processing (if enabled) → Background Enhancement API → 
-Token Validation → GPT-4o-mini Cleanup/Summary → Enhanced Email Delivery
+Token Validation → GPT-4.1 nano Cleanup/Summary → Enhanced Email Delivery
 ```
 **Privacy-Protected**: All processing happens in memory with zero transcript content logging.
 **Background Processing**: Secure token-based API prevents serverless function timeouts.
-**AI-Powered**: GPT-4o-mini provides grammar cleanup and intelligent summarization.
+**AI-Powered**: GPT-4.1 nano provides grammar cleanup and intelligent summarization.
 **User-Controlled**: Enhancement preferences configured once in dashboard, applied to all voice notes.
 
 ### 🤖 AI Enhancement Options
@@ -465,14 +516,14 @@ Token Validation → GPT-4o-mini Cleanup/Summary → Enhanced Email Delivery
 - **Use Case**: Immediate access, direct quotes, feeding to other AI tools
 
 #### Cleaned Transcript (Optional)
-- **AI Model**: GPT-4o-mini with specialized cleanup prompts
+- **AI Model**: GPT-4.1 nano with specialized cleanup prompts
 - **Improvements**: Fixed grammar, proper punctuation, removed filler words ("um", "uh", "like")
 - **Formatting**: Natural paragraph breaks, proper capitalization
 - **Preservation**: Original wording and tone maintained - no paraphrasing
 - **Use Case**: Professional documents, clean copy-paste text, presentation materials
 
 #### Smart Summary (Optional)
-- **AI Model**: GPT-4o-mini with structured summarization prompts
+- **AI Model**: GPT-4.1 nano with structured summarization prompts
 - **Format**: Markdown with organized sections
 - **Sections**: Main Topic (always), Key Points, Action Items, Important Details
 - **Length**: ≤150 words for comprehensive summaries

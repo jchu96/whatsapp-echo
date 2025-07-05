@@ -1,4 +1,7 @@
+# Do Not Modify .env.local Rule
 Never modify, edit, or suggest changes to .env.local files. These files contain sensitive environment variables and should not be altered by AI assistance.
+
+# Do not Chain Commands in Terminal/Shell Commands
 
 Never use && to chain commands in terminal/shell commands. Instead, suggest running commands separately or provide Windows-compatible alternatives.
 
@@ -10,3 +13,41 @@ For Windows environments:
 Example: Instead of "cd /path && npm run dev", suggest:
 cd /path
 npm run dev
+
+
+# Project Structure Documentation Rule
+
+## When adding new files to the codebase:
+
+**ALWAYS update the "COMPLETE PROJECT STRUCTURE" section in README.md** to include any new files or directories you create. This section should be kept current and accurate.
+
+### Rules for updating the project structure:
+
+1. **New files in existing directories**: Add the file to the appropriate section in the tree structure with a brief comment describing its purpose.
+
+2. **New directories**: Add the entire directory structure with all files and appropriate comments.
+
+3. **File naming convention**: Use descriptive comments that explain the file's purpose, not just the filename.
+
+4. **Maintain alphabetical order**: Keep files within each directory listed alphabetically.
+
+5. **Consistent formatting**: Use the existing indentation and comment style (e.g., `# Purpose description`).
+
+### Example format:
+
+├── lib/
+│ ├── audio.ts # Audio processing utilities
+│ ├── auth.ts # NextAuth configuration
+│ ├── database.ts # Database operations
+│ ├── new-file.ts # Brief description of what it does
+│ └── utils.ts # Utility functions
+
+
+### When to update:
+- Creating new source files (`.ts`, `.tsx`, `.js`, `.jsx`)
+- Adding new configuration files
+- Creating new directories
+- Moving or renaming files
+- Adding new documentation files
+
+**This ensures the README always reflects the current state of the codebase and helps other developers understand the project structure.**

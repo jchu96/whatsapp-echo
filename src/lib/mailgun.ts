@@ -3,6 +3,7 @@ import Mailgun from 'mailgun.js';
 import formData from 'form-data';
 import { createHmac } from 'crypto';
 import { getMailgunConfig } from '@/utils/env';
+import { markdownToHtml, containsMarkdown } from '@/lib/markdown';
 import { 
   MailgunWebhookPayload, 
   MailgunAttachment, 
@@ -16,6 +17,11 @@ let mailgunClient: any = null;
 function getMailgunClient() {
   if (!mailgunClient) {
     const config = getMailgunConfig();
+    
+    // Validate required configuration
+    if (!config.apiKey) {
+      throw new Error('MAILGUN_API_KEY is not configured');
+    }
     
     // Official pattern: new Mailgun(formData) then client()
     const mailgun = new Mailgun(formData);
@@ -110,6 +116,99 @@ const EMAIL_TEMPLATES = {
       </div>
     `
   }),
+
+  enhanced: (data: {
+    originalTranscript: string;
+    enhancedContent: string;
+    processingType: 'cleanup' | 'summary' | 'quickSummary';
+    filename: string;
+  }): EmailTemplate => {
+    const getProcessingLabel = (type: string): string => {
+      switch (type) {
+        case 'cleanup': return 'Cleaned';
+        case 'summary': return 'Summary';
+        case 'quickSummary': return 'Quick Summary';
+        default: return 'Enhanced';
+      }
+    };
+
+    const getProcessingDescription = (type: string): string => {
+      switch (type) {
+        case 'cleanup': return 'Grammar & formatting cleanup';
+        case 'summary': return 'Key points summary';
+        case 'quickSummary': return 'Quick summary';
+        default: return 'Enhanced transcript';
+      }
+    };
+
+    const getProcessingColor = (type: string): string => {
+      switch (type) {
+        case 'cleanup': return '#3498db';
+        case 'summary': return '#27ae60';
+        case 'quickSummary': return '#f39c12';
+        default: return '#9b59b6';
+      }
+    };
+
+    const enhancedFilename = `[${getProcessingLabel(data.processingType)}] ${data.filename}`;
+    const processingColor = getProcessingColor(data.processingType);
+    const processingLabel = getProcessingLabel(data.processingType);
+    const processingDescription = getProcessingDescription(data.processingType);
+
+    // Convert markdown to HTML if the content contains markdown
+    const enhancedContentHtml = containsMarkdown(data.enhancedContent) 
+      ? markdownToHtml(data.enhancedContent)
+      : data.enhancedContent.replace(/\n/g, '<br>');
+
+    return {
+      subject: `${processingLabel}: ${data.filename}`,
+      text: `Voice Note: ${data.filename}\nProcessing: ${processingLabel}\n\n${processingLabel}:\n${data.enhancedContent}\n\n---\n\n📋 Enhancement Details:\n• Processing Type: ${processingDescription}\n• Original Length: ${data.originalTranscript.length} characters\n• Enhanced Length: ${data.enhancedContent.length} characters\n• Processed: ${new Date().toLocaleString()}\n\n🎤 Original Transcript:\n${data.originalTranscript}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: linear-gradient(135deg, ${processingColor}, ${processingColor}dd); color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
+            <h1 style="margin: 0; font-size: 24px; font-weight: 600;">${processingLabel}</h1>
+            <p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 14px;">${processingDescription}</p>
+          </div>
+          
+          <div style="background: white; padding: 20px; border: 1px solid #e1e5e9; border-top: none; border-radius: 0 0 8px 8px;">
+            <div style="margin-bottom: 20px;">
+              <h3 style="color: #2c3e50; margin: 0 0 10px 0; font-size: 18px;">Voice Note</h3>
+              <p style="color: #666; margin: 0; font-size: 14px;"><strong>${data.filename}</strong></p>
+            </div>
+            
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${processingColor};">
+              <div style="color: #2c3e50; line-height: 1.6; font-size: 15px;">
+                ${enhancedContentHtml}
+              </div>
+            </div>
+            
+            <div style="background: #f1f3f4; padding: 15px; border-radius: 6px; margin: 20px 0;">
+              <h4 style="color: #2c3e50; margin: 0 0 10px 0; font-size: 14px;">📋 Enhancement Details</h4>
+              <div style="font-size: 13px; color: #666; line-height: 1.5;">
+                <p style="margin: 5px 0;"><strong>Processing Type:</strong> ${processingDescription}</p>
+                <p style="margin: 5px 0;"><strong>Original Length:</strong> ${data.originalTranscript.length} characters</p>
+                <p style="margin: 5px 0;"><strong>Enhanced Length:</strong> ${data.enhancedContent.length} characters</p>
+                <p style="margin: 5px 0;"><strong>Processed:</strong> ${new Date().toLocaleString()}</p>
+              </div>
+            </div>
+            
+            <div style="border-top: 1px solid #e1e5e9; padding-top: 20px; margin-top: 20px;">
+              <h4 style="color: #2c3e50; margin: 0 0 15px 0; font-size: 16px;">🎤 Original Transcript</h4>
+              <div style="background: #f5f5f5; padding: 15px; border-radius: 6px; border: 1px solid #e1e5e9;">
+                <p style="margin: 0; line-height: 1.6; color: #555; font-size: 14px; white-space: pre-wrap;">${data.originalTranscript}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div style="text-align: center; margin-top: 20px;">
+            <p style="color: #666; font-size: 12px; margin: 0;">
+              Voice Note Transcription Service
+            </p>
+          </div>
+        </div>
+      `
+    };
+  },
 
   error: (errorType: TimeoutErrorType, filename?: string): EmailTemplate => {
     const templates = {
@@ -260,12 +359,18 @@ export function verifyMailgunSignature(
   try {
     const config = getMailgunConfig();
     
+    // Validate required configuration
+    if (!config.webhookKey) {
+      console.error('🔐 [MAILGUN] Webhook key not configured, cannot verify signature');
+      return false;
+    }
+    
     console.log('🔐 [MAILGUN] Signature verification details:', {
       timestamp: timestamp,
       timestampDate: new Date(parseInt(timestamp) * 1000),
       token: token?.substring(0, 10) + '...',
       signature: signature?.substring(0, 10) + '...',
-      webhookKey: config.webhookKey ? 'Present' : 'Missing'
+      webhookKey: 'Present'
     });
 
     // Manual verification using the webhook signing key
@@ -599,6 +704,43 @@ export async function sendUserApprovalNotification(
     return result;
   } catch (error) {
     console.error('❌ [USER_APPROVAL] Failed to send approval notification:', error);
+    return false;
+  }
+}
+
+/**
+ * Send enhanced email with processed content
+ * @param to - Recipient email
+ * @param data - Enhanced email data
+ * @param abortSignal - Abort signal for timeout
+ * @returns Promise<boolean> - Success status
+ */
+export async function sendEnhancedEmail(
+  to: string,
+  data: {
+    originalTranscript: string;
+    enhancedContent: string;
+    processingType: 'cleanup' | 'summary' | 'quickSummary';
+    filename: string;
+  },
+  abortSignal?: AbortSignal
+): Promise<boolean> {
+  try {
+    console.log('📧 [ENHANCED_EMAIL] Sending enhanced email:', {
+      to,
+      processingType: data.processingType,
+      filename: data.filename,
+      originalLength: data.originalTranscript.length,
+      enhancedLength: data.enhancedContent.length
+    });
+    
+    const template = EMAIL_TEMPLATES.enhanced(data);
+    const result = await sendEmail(to, template, abortSignal);
+    
+    console.log('📧 [ENHANCED_EMAIL] Enhanced email result:', result);
+    return result;
+  } catch (error) {
+    console.error('❌ [ENHANCED_EMAIL] Failed to send enhanced email:', error);
     return false;
   }
 } 

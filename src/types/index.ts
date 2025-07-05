@@ -114,6 +114,18 @@ export interface EnvConfig {
   MAX_FILE_SIZE_MB?: string;
   DOWNLOAD_TIMEOUT_SEC?: string;
   PROCESSING_TIMEOUT_SEC?: string;
+  // Company information
+  PRIVACY_EMAIL?: string;
+  EMAIL_SITE_CONTACT?: string;
+  COMPANY_NAME?: string;
+  COMPANY_ADDRESS?: string;
+  COMPANY_CITY?: string;
+  COMPANY_STATE?: string;
+  COMPANY_ZIP?: string;
+  COMPANY_FULL_ADDRESS?: string;
+  // reCAPTCHA configuration
+  RECAPTCHA_SITE_KEY?: string;
+  RECAPTCHA_SECRET_KEY?: string;
 }
 
 // Database query result types

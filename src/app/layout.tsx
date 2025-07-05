@@ -48,7 +48,14 @@ export default function RootLayout({
           <footer className="border-t bg-background">
             <div className="container mx-auto px-4 py-3">
               <div className="text-center text-xs text-muted-foreground">
-                Voice Note Transcription Service v1.0.0 • July 2025
+                <div className="mb-2">
+                  Echo Scribe - Voice Note Transcription v1.0.2 • July 2025
+                </div>
+                <div className="space-x-4">
+                  <a href="/privacy" className="hover:text-foreground underline">Privacy Policy</a>
+                  <a href="/terms" className="hover:text-foreground underline">Terms of Service</a>
+                  <a href="/contact" className="hover:text-foreground underline">Contact</a>
+                </div>
               </div>
             </div>
           </footer>

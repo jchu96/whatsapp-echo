@@ -1,8 +1,23 @@
 # WhatsApp Echo - Voice Note Transcription Service Architecture
 
 **Revision Date:** July 5, 2025  
-**Version:** 1.1.0  
+**Version:** 1.01  
 **Status:** Production Ready with Background Processing
+
+---
+
+## 🔄 1.01 Update: Enhanced Email System & Markdown Rendering
+
+**Release Date:** July 5, 2025
+
+- **Beautiful HTML Email Templates for Enhancements**: All enhancement emails (cleaned, summary, quick summary) now use modern, styled HTML templates for a much better reading experience.
+- **Markdown Rendering for Summaries**: Summaries and quick summaries are now delivered as formatted HTML, not plain text. Markdown is converted to HTML using the Showdown library.
+- **Showdown Integration**: The Showdown library is used for robust markdown-to-HTML conversion in all enhancement emails, ensuring bullet points, headings, and formatting are preserved.
+- **New Markdown Utility**: The new `src/lib/markdown.ts` utility provides secure, reusable markdown-to-HTML conversion for all enhancement emails.
+- **Consistent Branding**: All enhancement emails now match the look and feel of other system emails.
+- **Improved User Experience**: Enhanced emails are easier to read, with clear sections, bullet points, and action items.
+
+---
 
 ## High-Level Overview
 
@@ -26,11 +41,12 @@ WhatsApp Echo is a production-ready voice note transcription service built with 
 - **API Routes** - Next.js API routes for webhooks, admin operations, preferences, and auth
 - **User Preferences API** - RESTful endpoints for managing enhancement preferences
 - **Smart Webhook Handler** - Processes inbound emails with always-raw + optional enhancements
-- **Background Enhancement API** - Secure background processing for GPT-4o-mini enhancements
+- **Background Enhancement API** - Secure background processing for GPT-4.1 nano enhancements
 - **Authentication Service** - NextAuth.js with Google OAuth integration
 - **Database Layer** - Cloudflare D1 operations via REST API with preference management
-- **OpenAI Integration** - Whisper transcription + GPT-4o-mini enhancement services
+- **OpenAI Integration** - Whisper transcription + GPT-4.1 nano enhancement services
 - **Multi-Email Service** - Mailgun SDK for sending raw transcripts and enhanced versions
+- **Markdown Utility** - `src/lib/markdown.ts` provides secure, reusable markdown-to-HTML conversion for all enhancement emails, leveraging Showdown for robust formatting.
 
 ### Security & Middleware
 - **Route Protection Middleware** - Authentication and authorization enforcement
@@ -39,6 +55,7 @@ WhatsApp Echo is a production-ready voice note transcription service built with 
 - **Input Validation** - File type, size, and format validation
 - **Error Handling** - Comprehensive error categorization and user feedback
 - **Background API Security** - Token-based authentication for background processing
+- **reCAPTCHA Integration** - v2 protection for contact forms against automated abuse
 
 ### Infrastructure & Configuration
 - **Vercel Deployment** - Serverless hosting with function optimizations
@@ -75,7 +92,7 @@ graph TB
     WH --> |Queues background| BG[Background Enhancement API]
     BG --> |Token validation| SEC
     BG --> |Re-transcribes| WHISPER
-    BG --> |Enhances| GPT[GPT-4o-mini]
+    BG --> |Enhances| GPT[GPT-4.1 nano]
     GPT --> |Cleanup/Summary| EMAIL
     EMAIL --> |Sends enhanced| MG
     
@@ -194,7 +211,7 @@ sequenceDiagram
     participant AI as OpenAI Whisper
     participant E as Email Service
     participant BG as Background Enhancement API
-    participant GPT as GPT-4o-mini
+    participant GPT as GPT-4.1 nano
     
     U->>M: Email with voice attachment
     M->>W: Webhook with FormData
@@ -286,11 +303,11 @@ CREATE TABLE voice_events (
 | **Authentication** | NextAuth.js v4 | Google OAuth 2.0 |
 | **Email Processing** | Mailgun SDK | Mailgun API, Webhook validation |
 | **AI Transcription** | OpenAI SDK | Whisper-1 model via REST API |
-| **AI Enhancement** | OpenAI SDK | GPT-4o-mini model for cleanup/summary |
+| **AI Enhancement** | OpenAI SDK | GPT-4.1 nano model for cleanup/summary |
 | **User Preferences** | TypeScript, React State | RESTful API with form validation |
 | **Background Processing** | Node.js, Promise-based | Secure token-based authentication |
 | **UI Components** | shadcn/ui, Radix UI | Tailwind CSS, CSS Modules |
-| **Security** | Custom middleware | CSRF tokens, Rate limiting, Background API tokens |
+| **Security** | Custom middleware | CSRF tokens, Rate limiting, Background API tokens, reCAPTCHA v2 |
 | **Monitoring** | Sentry SDK | Error tracking, Performance monitoring |
 | **Development** | TypeScript 5.6, ESLint | Wrangler CLI, Vercel CLI |
 | **Deployment** | Vercel Projects | GitHub integration, Environment variables |
@@ -330,6 +347,7 @@ CREATE TABLE voice_events (
 - **CSRF Protection**: Token-based request validation
 - **Background API Security**: SHA256 token-based authentication for background processing
 - **Webhook Security**: HMAC signature verification for Mailgun (implementation pending)
+- **reCAPTCHA v2**: Contact form protection against automated abuse and spam bots
 
 ### Privacy Protection
 - **Zero Content Logging**: Transcript content is NEVER logged to console, files, or monitoring systems
@@ -365,6 +383,7 @@ CREATE TABLE voice_events (
 - **Session Security**: JWT tokens need proper rotation and expiration
 - **Input Validation**: Audio file content validation beyond file type checking
 - **Background API Security**: Token-based authentication requires secure key management
+- **Contact Form Security**: reCAPTCHA v2 prevents automated abuse and spam submissions
 
 ### Operational Concerns
 - **Monitoring Gaps**: Limited visibility into Cloudflare D1 performance
@@ -399,6 +418,7 @@ CREATE TABLE voice_events (
 - **Token Authentication**: SHA256-based authentication for background API
 - **Middleware Updates**: Background API route protection
 - **Error Handling**: Comprehensive error handling for background processing
+- **reCAPTCHA Integration**: v2 protection for contact forms with server-side verification
 
 ### 🔄 Pending Implementation
 - **Webhook Signature Verification**: Complete Mailgun HMAC signature validation

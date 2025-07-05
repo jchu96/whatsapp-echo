@@ -23,6 +23,11 @@ export async function transcribeAudio(
 ): Promise<WhisperTranscription> {
   const config = getOpenAIConfig();
   
+  // Validate required configuration
+  if (!config.apiKey) {
+    throw new Error('OPENAI_API_KEY is not configured');
+  }
+  
   try {
     console.log('🎤 [WHISPER] Initializing OpenAI client');
     

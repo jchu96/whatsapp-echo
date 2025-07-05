@@ -78,6 +78,18 @@ export function getEnvConfig(): EnvConfig {
     MAX_FILE_SIZE_MB: process.env.MAX_FILE_SIZE_MB,
     DOWNLOAD_TIMEOUT_SEC: process.env.DOWNLOAD_TIMEOUT_SEC,
     PROCESSING_TIMEOUT_SEC: process.env.PROCESSING_TIMEOUT_SEC,
+    // Company information
+    PRIVACY_EMAIL: process.env.PRIVACY_EMAIL,
+    EMAIL_SITE_CONTACT: process.env.EMAIL_SITE_CONTACT,
+    COMPANY_NAME: process.env.COMPANY_NAME,
+    COMPANY_ADDRESS: process.env.COMPANY_ADDRESS,
+    COMPANY_CITY: process.env.COMPANY_CITY,
+    COMPANY_STATE: process.env.COMPANY_STATE,
+    COMPANY_ZIP: process.env.COMPANY_ZIP,
+    COMPANY_FULL_ADDRESS: process.env.COMPANY_FULL_ADDRESS,
+    // reCAPTCHA configuration
+    RECAPTCHA_SITE_KEY: process.env.RECAPTCHA_SITE_KEY,
+    RECAPTCHA_SECRET_KEY: process.env.RECAPTCHA_SECRET_KEY,
   };
 }
 
@@ -185,4 +197,55 @@ export function getOpenAIConfig() {
     apiKey: process.env.OPENAI_API_KEY || undefined,
     apiUrl: 'https://api.openai.com/v1',
   };
+}
+
+/**
+ * Get privacy contact email
+ * @returns Privacy contact email address
+ */
+export function getPrivacyEmail(): string {
+  return process.env.PRIVACY_EMAIL || 'privacy@yourcompany.com';
+}
+
+/**
+ * Get site contact email
+ * @returns Site contact email address
+ */
+export function getSiteContactEmail(): string {
+  return process.env.EMAIL_SITE_CONTACT || 'hello@yourcompany.com';
+}
+
+/**
+ * Get company information
+ * @returns Company information object
+ */
+export function getCompanyInfo() {
+  return {
+    name: process.env.COMPANY_NAME || 'Your Company',
+    address: process.env.COMPANY_ADDRESS || '123 Main Street',
+    city: process.env.COMPANY_CITY || 'Los Angeles',
+    state: process.env.COMPANY_STATE || 'CA',
+    zipCode: process.env.COMPANY_ZIP || '90027',
+    fullAddress: process.env.COMPANY_FULL_ADDRESS || '123 Main Street, Los Angeles, CA 90027'
+  };
+}
+
+/**
+ * Get reCAPTCHA configuration
+ * @returns reCAPTCHA config object
+ */
+export function getRecaptchaConfig() {
+  return {
+    siteKey: process.env.RECAPTCHA_SITE_KEY || undefined,
+    secretKey: process.env.RECAPTCHA_SECRET_KEY || undefined,
+    enabled: !!(process.env.RECAPTCHA_SITE_KEY && process.env.RECAPTCHA_SECRET_KEY)
+  };
+}
+
+/**
+ * Get reCAPTCHA site key for frontend
+ * @returns reCAPTCHA site key
+ */
+export function getRecaptchaSiteKey(): string | undefined {
+  return process.env.RECAPTCHA_SITE_KEY;
 } 
