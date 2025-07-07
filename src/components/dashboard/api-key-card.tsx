@@ -161,24 +161,50 @@ export function ApiKeyCard({ apiKey, isAdmin, userEmail }: ApiKeyCardProps) {
               </Button>
             </div>
             <div className="p-4 overflow-auto flex-1">
-              <div className="space-y-3">
-                <p className="text-sm text-gray-600 mb-4">
-                  After downloading the shortcut, you'll need to paste your API key in the configuration. 
-                  Here's where to add it:
+              <div className="space-y-4">
+                <p className="text-sm text-gray-600">
+                  After downloading the shortcut, follow these steps to configure your API key:
                 </p>
-                <div className="relative">
-                  <Image
-                    src="/images/PasteAPIHere.png"
-                    alt="iOS Shortcut API Key Setup Instructions"
-                    width={600}
-                    height={999}
-                    className="w-full h-auto rounded border"
-                    style={{ maxHeight: '60vh', objectFit: 'contain' }}
-                  />
+                
+                <div className="space-y-3">
+                  <h4 className="font-medium text-gray-900">Step 1: Open the Shortcuts app</h4>
+                  <p className="text-sm text-gray-600">
+                    Go to the Shortcuts app on your iPhone and find "Echo Scribe"
+                  </p>
+                  <div className="relative flex justify-center">
+                    <Image
+                      src="/images/ShortcutEdit.png"
+                      alt="Find Echo Scribe in Shortcuts app and tap the three dots"
+                      width={245}
+                      height={200}
+                      className="rounded border"
+                    />
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    Tap the "..." (three dots) next to Echo Scribe to edit the shortcut
+                  </p>
                 </div>
+
+                <div className="space-y-3">
+                  <h4 className="font-medium text-gray-900">Step 2: Paste your API key</h4>
+                  <p className="text-sm text-gray-600">
+                    In the shortcut editor, find the "Text" field and paste your API key:
+                  </p>
+                  <div className="relative">
+                    <Image
+                      src="/images/PasteAPIHere.png"
+                      alt="iOS Shortcut API Key Setup Instructions"
+                      width={600}
+                      height={999}
+                      className="w-full h-auto rounded border"
+                      style={{ maxHeight: '50vh', objectFit: 'contain' }}
+                    />
+                  </div>
+                </div>
+
                 <div className="bg-yellow-50 p-3 rounded border border-yellow-200">
                   <p className="text-sm text-yellow-800">
-                    💡 <strong>Tip:</strong> Copy your API key above, then paste it in the "Text" field shown in the image.
+                    💡 <strong>Tip:</strong> Copy your API key above, then paste it in the "Text" field shown in Step 2.
                   </p>
                 </div>
               </div>
