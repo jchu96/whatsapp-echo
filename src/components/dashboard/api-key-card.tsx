@@ -16,6 +16,7 @@ export function ApiKeyCard({ apiKey, isAdmin, userEmail }: ApiKeyCardProps) {
   const [copied, setCopied] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
+  const [showDemo, setShowDemo] = useState(false);
 
   const handleCopyKey = async () => {
     try {
@@ -95,6 +96,14 @@ export function ApiKeyCard({ apiKey, isAdmin, userEmail }: ApiKeyCardProps) {
                 >
                   📖 Setup Instructions
                 </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowDemo(true)}
+                  className="whitespace-nowrap"
+                >
+                  🎬 View Demo
+                </Button>
               </div>
               <p className="text-sm text-gray-600">
                 One-tap voice transcription from your iPhone
@@ -170,6 +179,49 @@ export function ApiKeyCard({ apiKey, isAdmin, userEmail }: ApiKeyCardProps) {
                 <div className="bg-yellow-50 p-3 rounded border border-yellow-200">
                   <p className="text-sm text-yellow-800">
                     💡 <strong>Tip:</strong> Copy your API key above, then paste it in the "Text" field shown in the image.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Voice Note Demo Modal */}
+      {showDemo && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center p-4 border-b">
+              <h3 className="text-lg font-semibold">Voice Note Forwarding Demo</h3>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowDemo(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </Button>
+            </div>
+            <div className="p-4 overflow-auto flex-1">
+              <div className="space-y-3">
+                <p className="text-sm text-gray-600 mb-4">
+                  Watch how to use the iOS Shortcut to forward voice notes for instant transcription:
+                </p>
+                <div className="relative flex justify-center">
+                  <Image
+                    src="/images/VoiceNoteForwarding.gif"
+                    alt="Voice Note Forwarding Demo"
+                    width={222}
+                    height={480}
+                    className="rounded border shadow-lg"
+                    style={{ maxHeight: '60vh', objectFit: 'contain' }}
+                    unoptimized={true}
+                  />
+                </div>
+                <div className="bg-green-50 p-3 rounded border border-green-200">
+                  <p className="text-sm text-green-800">
+                    🎯 <strong>How it works:</strong> After receiving a voice note, tap the share button, 
+                    select "Echo Scribe" shortcut, and get instant transcription!
                   </p>
                 </div>
               </div>

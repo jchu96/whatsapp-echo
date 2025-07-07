@@ -913,8 +913,15 @@ Every user gets a permanent API key for seamless iOS Shortcut integration. Recor
 #### Quick Setup
 1. **Get Your API Key**: Visit your dashboard to copy your personal API key
 2. **Download iOS Shortcut**: One-click download from your dashboard  
-3. **Start Recording**: Use the shortcut from anywhere on your iPhone
-4. **Instant Results**: Get transcriptions in seconds, no app switching needed
+3. **Configure API Key**: Use the visual setup instructions to paste your API key in the shortcut
+4. **Start Recording**: Use the shortcut from anywhere on your iPhone (see demo for workflow)
+5. **Instant Results**: Get transcriptions in seconds, no app switching needed
+
+#### Visual Guides
+- **📖 Setup Instructions**: Step-by-step visual guide showing exactly where to paste your API key in the iOS Shortcut configuration  
+  ![iOS Shortcut API Key Setup](public/images/PasteAPIHere.png)
+- **🎬 Usage Demo**: Animated demonstration of the complete voice note forwarding workflow from recording to transcription  
+  ![Voice Note Forwarding Demo](public/images/VoiceNoteForwarding.gif)
 
 #### Credit & Inspiration
 **Special thanks to [Giacomo Melzi](https://linkedin.com/in/giacomomelzi)** for the original iOS Shortcut concept! His [innovative implementation](https://giacomomelzi.com/transcribe-audio-messages-iphone-ai) inspired this feature.
