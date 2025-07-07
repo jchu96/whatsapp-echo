@@ -23,6 +23,8 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
   const [users, setUsers] = useState<UserWithStats[]>(initialUsers);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState<string | null>(null);
+  const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
+  const [loadingApiKey, setLoadingApiKey] = useState<string | null>(null);
 
   const filteredUsers = users.filter((user: UserWithStats) =>
     user.google_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -63,6 +65,40 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
     }
   };
 
+  const viewApiKey = async (userId: string) => {
+    if (apiKeys[userId]) {
+      // Already fetched, just toggle visibility
+      setApiKeys(prev => ({ ...prev, [userId]: '' }));
+      return;
+    }
+
+    setLoadingApiKey(userId);
+    
+    try {
+      const response = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'get_api_key',
+          userId,
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setApiKeys(prev => ({ ...prev, [userId]: result.apiKey }));
+      } else {
+        console.error('Failed to fetch API key');
+      }
+    } catch (error) {
+      console.error('Error fetching API key:', error);
+    } finally {
+      setLoadingApiKey(null);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Search */}
@@ -86,6 +122,9 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
               Email
             </TableHead>
             <TableHead>
+              Actions
+            </TableHead>
+            <TableHead>
               Slug
             </TableHead>
             <TableHead>
@@ -100,9 +139,6 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
             <TableHead>
               Created
             </TableHead>
-            <TableHead>
-              Actions
-            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -111,6 +147,43 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
               <TableCell>
                 <div className="font-medium">
                   {user.google_email}
+                </div>
+                {apiKeys[user.id] && (
+                  <div className="mt-1">
+                    <code className="text-xs bg-gray-100 px-2 py-1 rounded font-mono break-all">
+                      {apiKeys[user.id]}
+                    </code>
+                  </div>
+                )}
+              </TableCell>
+              <TableCell>
+                <div className="flex gap-2">
+                  <Button
+                    variant={Boolean(user.approved) ? "destructive" : "default"}
+                    size="sm"
+                    onClick={() => toggleUserApproval(user.id)}
+                    disabled={loading === user.id}
+                  >
+                    {loading === user.id
+                      ? "Loading..."
+                      : Boolean(user.approved)
+                      ? "Revoke"
+                      : "Approve"
+                    }
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => viewApiKey(user.id)}
+                    disabled={loadingApiKey === user.id}
+                  >
+                    {loadingApiKey === user.id
+                      ? "Loading..."
+                      : apiKeys[user.id]
+                      ? "Hide Key"
+                      : "View Key"
+                    }
+                  </Button>
                 </div>
               </TableCell>
               <TableCell>
@@ -133,21 +206,6 @@ export function UsersTable({ initialUsers }: UsersTableProps) {
               </TableCell>
               <TableCell>
                 {formatDate(user.created_at)}
-              </TableCell>
-              <TableCell>
-                <Button
-                  variant={Boolean(user.approved) ? "destructive" : "default"}
-                  size="sm"
-                  onClick={() => toggleUserApproval(user.id)}
-                  disabled={loading === user.id}
-                >
-                  {loading === user.id
-                    ? "Loading..."
-                    : Boolean(user.approved)
-                    ? "Revoke"
-                    : "Approve"
-                  }
-                </Button>
               </TableCell>
             </TableRow>
           ))}

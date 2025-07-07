@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 // @ts-ignore
 import { getServerSession } from 'next-auth';
 import { authOptions, isSessionAdmin } from '@/lib/auth';
-import { getUsersWithStats, toggleUserApproval } from '@/lib/database';
+import { getUsersWithStats, toggleUserApproval, getUserById } from '@/lib/database';
 import { sendUserApprovalNotification } from '@/lib/mailgun';
 
 // Vercel configuration
@@ -102,6 +102,26 @@ export async function POST(request: NextRequest) {
           success: true, 
           user: result.data,
           message: `User ${Boolean(result.data?.approved) ? 'approved' : 'revoked'} successfully`
+        });
+      }
+
+      case 'get_api_key': {
+        const result = await getUserById(userId);
+        
+        if (!result.success) {
+          return NextResponse.json({ error: result.error }, { status: 500 });
+        }
+
+        if (!result.data) {
+          return NextResponse.json({ error: 'User not found' }, { status: 404 });
+        }
+
+        console.log('🔍 [ADMIN] API key requested for user:', result.data.google_email);
+        
+        return NextResponse.json({ 
+          success: true, 
+          apiKey: result.data.api_key,
+          message: 'API key retrieved successfully'
         });
       }
       

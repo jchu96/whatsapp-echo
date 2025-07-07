@@ -221,6 +221,44 @@ export async function getUserByApiKey(apiKey: string): Promise<DbResponse<User>>
 }
 
 /**
+ * Get user by ID
+ * @param userId - User ID
+ * @returns Promise<DbResponse<User>> - User data or error
+ */
+export async function getUserById(userId: string): Promise<DbResponse<User>> {
+  try {
+    console.log('🔍 [ADMIN] Getting user by ID:', userId);
+    
+    const result = await executeQuery<User>(
+      'SELECT * FROM users WHERE id = ? LIMIT 1',
+      [userId]
+    );
+
+    console.log('🔍 [ADMIN] getUserById result:', result.success);
+
+    if (!result.success) {
+      console.error('🚨 [ADMIN] getUserById failed:', result.error);
+      return { success: false, error: result.error };
+    }
+
+    const user = result.results?.[0];
+    if (!user) {
+      console.log('ℹ️ [ADMIN] User not found for ID:', userId);
+      return { success: false, error: 'User not found' };
+    }
+
+    console.log('✅ [ADMIN] User found by ID:', user.google_email);
+    return { success: true, data: user };
+  } catch (error) {
+    console.error('🚨 [ADMIN] getUserById error:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to get user' 
+    };
+  }
+}
+
+/**
  * Create a new user
  * @param userData - User creation data
  * @returns Promise<DbResponse<User>> - Created user data or error

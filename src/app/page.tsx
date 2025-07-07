@@ -315,6 +315,120 @@ export default async function HomePage() {
           </div>
         </div>
 
+        {/* iOS Shortcut Showcase Section */}
+        <div className="max-w-4xl mx-auto mb-16 transform hover:scale-[1.01] transition-transform duration-300">
+          <div className="bg-gradient-to-br from-orange-50 to-amber-50 backdrop-blur-sm rounded-2xl shadow-xl p-8 md:p-12 border border-orange-200">
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-orange-100 rounded-full mb-4">
+                <span className="text-orange-600 text-3xl">📱</span>
+              </div>
+              <h2 className="text-3xl font-bold mb-4 text-gray-900">iOS Shortcut Integration</h2>
+              <p className="text-lg text-gray-700 leading-relaxed max-w-2xl mx-auto">
+                One-tap voice transcription directly from your iPhone. Record from anywhere, get instant text—no app switching required.
+              </p>
+            </div>
+            
+            <div className="grid lg:grid-cols-2 gap-8 items-center">
+              {/* Demo Video */}
+              <div className="order-2 lg:order-1">
+                <div className="relative bg-white rounded-2xl shadow-lg p-4 max-w-xs mx-auto">
+                  <video
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    className="w-full h-auto rounded-xl shadow-lg"
+                    style={{ aspectRatio: '222/480' }}
+                  >
+                    <source src="/images/VoiceNoteForwardDemo.mp4" type="video/mp4" />
+                    <Image
+                      src="/images/VoiceNoteForwarding.gif"
+                      alt="Voice Note Forwarding Demo"
+                      width={222}
+                      height={480}
+                      className="w-full h-auto rounded-xl"
+                    />
+                  </video>
+                  <div className="absolute -bottom-2 -right-2 bg-orange-500 text-white text-xs px-2 py-1 rounded-full font-semibold">
+                    Live Demo
+                  </div>
+                </div>
+              </div>
+              
+              {/* Features */}
+              <div className="order-1 lg:order-2 space-y-6">
+                <div className="space-y-4">
+                  <div className="flex items-start space-x-3">
+                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-green-600 font-bold text-sm">1</span>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">Receive Voice Note</h3>
+                      <p className="text-gray-600 text-sm">Get a voice message in any app (WhatsApp, iMessage, etc.)</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start space-x-3">
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-blue-600 font-bold text-sm">2</span>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">Share via Shortcut</h3>
+                      <p className="text-gray-600 text-sm">Tap share button, select "Echo Scribe" shortcut</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start space-x-3">
+                    <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-purple-600 font-bold text-sm">3</span>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">Instant Transcription</h3>
+                      <p className="text-gray-600 text-sm">Get clean, copy-ready text in 15-30 seconds</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-white/60 backdrop-blur-sm rounded-xl p-6 border border-orange-200">
+                  <h3 className="font-bold text-lg text-gray-900 mb-3">What You Get</h3>
+                  <div className="space-y-2 text-sm text-gray-700">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-green-600">✓</span>
+                      <span>Personal API key for secure access</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-green-600">✓</span>
+                      <span>One-click shortcut download</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-green-600">✓</span>
+                      <span>Visual setup instructions</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-green-600">✓</span>
+                      <span>Same privacy guarantees as email</span>
+                    </div>
+                  </div>
+                </div>
+                
+                {session ? (
+                  <Button asChild size="lg" className="w-full bg-orange-600 hover:bg-orange-700 text-white">
+                    <Link href="/dashboard">
+                      Get Your iOS Shortcut
+                    </Link>
+                  </Button>
+                ) : (
+                  <Button asChild size="lg" className="w-full bg-orange-600 hover:bg-orange-700 text-white">
+                    <Link href="/auth/signin">
+                      Sign Up for iOS Shortcut
+                    </Link>
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Use Cases Section */}
         <div className="max-w-4xl mx-auto mb-16 transform hover:scale-[1.01] transition-transform duration-300">
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-8 md:p-12 border border-gray-100">
