@@ -1,8 +1,18 @@
 # Echo Scribe - Voice Note Transcription 🎤→📝
 
-**Version 1.0.2 – July 5, 2025**
+**Version 1.03 – July 7, 2025**
 
 ## 📝 Changelog
+
+### v1.03 (2025-07-07)
+- **iOS Shortcut API Integration**: Added permanent API keys for every user enabling direct iOS Shortcut integration
+- **Programmatic API Endpoint**: New `/api/transcribe` endpoint with Bearer token authentication for developers
+- **API Key Management**: Secure 32-character hex API keys with automatic generation and dashboard management
+- **Enhanced Dashboard**: Added API key card with copy/reveal functionality and iOS shortcut download button
+- **Database Migration**: Added `api_key` column to users table with automatic backfill for existing users
+- **Rate Limiting Integration**: API endpoints use existing webhook rate limiting (5 requests/minute per user)
+- **Privacy-First API**: Same zero-logging policy as email processing with JSON-only responses
+- **Developer Experience**: Complete API documentation with curl examples and error handling
 
 ### v1.0.2 (2025-07-05)
 - **Documentation Enhancement**: Comprehensive review and alignment of README and Architecture documentation
@@ -893,3 +903,89 @@ wrangler d1 execute voice-transcription-db --file=./sql/schema.sql --remote
 - **Webhook Testing**: http://localhost:3000/api/inbound
 - **Admin Panel**: http://localhost:3000/admin
 - **User Dashboard**: http://localhost:3000/dashboard
+
+## 📱 Programmatic API
+
+### iOS Shortcut Integration
+
+Every user gets a permanent API key for seamless iOS Shortcut integration. Record voice notes directly from your iPhone and get instant transcriptions without opening any app.
+
+#### Quick Setup
+1. **Get Your API Key**: Visit your dashboard to copy your personal API key
+2. **Download iOS Shortcut**: One-click download from your dashboard  
+3. **Start Recording**: Use the shortcut from anywhere on your iPhone
+4. **Instant Results**: Get transcriptions in seconds, no app switching needed
+
+#### Credit & Inspiration
+**Special thanks to [Giacomo Melzi](https://linkedin.com/in/giacomomelzi)** for the original iOS Shortcut concept! His [innovative implementation](https://giacomomelzi.com/transcribe-audio-messages-iphone-ai) inspired this feature.
+
+**How Echo Scribe's Implementation Differs:**
+- **Managed Service**: Echo Scribe acts as a secure proxy service between your iOS Shortcut and OpenAI
+- **No Personal OpenAI Key Required**: Users don't need their own OpenAI API accounts or billing
+- **Centralized Management**: Echo Scribe handles OpenAI API keys, billing, and rate limiting centrally
+- **User-Specific Authentication**: Each user gets their own Echo Scribe API key for secure access
+- **Integrated Features**: Leverages Echo Scribe's existing user management, preferences, and privacy protections
+
+This approach provides the same powerful iOS Shortcut functionality while eliminating the need for users to manage their own OpenAI accounts, making voice transcription accessible to everyone.
+
+#### API Endpoint
+```bash
+POST /api/transcribe
+Authorization: Bearer your-api-key
+Content-Type: multipart/form-data
+
+# Example usage
+curl -X POST \
+  -H "Authorization: Bearer your-api-key" \
+  -F "file=@voice-note.m4a" \
+  https://your-domain.vercel.app/api/transcribe
+```
+
+#### Response Format
+```json
+{
+  "text": "Your transcribed voice note content here..."
+}
+```
+
+#### Features
+- **🔐 Secure Authentication**: Personal API key per user
+- **⚡ Fast Processing**: Same 15-30 second transcription speed
+- **📊 Usage Tracking**: API calls logged in your dashboard
+- **🔄 Rate Limited**: 5 requests per minute (same as email processing)
+- **📱 iOS Optimized**: Works seamlessly with iOS Shortcuts app
+- **🎤 Multiple Formats**: Supports .m4a, .mp3, .wav, .ogg files
+- **💾 No Email Required**: Direct JSON response, no email processing
+
+#### Use Cases
+- **Voice Memos**: Quick transcription of personal notes
+- **Meeting Notes**: Instant transcripts during calls
+- **Content Creation**: Voice-to-text for writing workflows  
+- **Accessibility**: Audio content made searchable and readable
+- **Automation**: Integration with other iOS shortcuts and workflows
+
+#### Error Handling
+```json
+// Invalid API key
+{ "error": "Invalid or missing API key" }
+
+// File too large  
+{ "error": "File size exceeds 15MB limit" }
+
+// Unsupported format
+{ "error": "Unsupported file format" }
+
+// Rate limit exceeded
+{ "error": "Rate limit exceeded - 5 requests per minute" }
+```
+
+### API Security
+- **🔑 Bearer Token Authentication**: Standard OAuth-style authentication
+- **🛡️ Rate Limiting**: Per-user limits prevent abuse  
+- **📝 Privacy-First**: Same zero-logging policy as email processing
+- **🔒 Secure Key Generation**: Cryptographically secure API keys
+- **👤 User Isolation**: Each user's data completely isolated
+
+---
+
+## 🎤 Voice Processing Pipeline

@@ -183,3 +183,4 @@ wrangler.toml
 
 .env*.local
 
+.sqlfluff

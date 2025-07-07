@@ -32,6 +32,18 @@ export function generateEmailSlug(): string {
 }
 
 /**
+ * Generate a permanent API key for a user
+ * Creates a hex UUID-like string without dashes (32 characters)
+ * @returns string - A unique API key
+ */
+export function generateApiKey(): string {
+  // Use hex characters only (0-9, a-f) for UUID-like format
+  const hexAlphabet = '0123456789abcdef';
+  const customHex = customAlphabet(hexAlphabet, 32);
+  return customHex();
+}
+
+/**
  * Validate if a string is a valid ID
  * Updated to validate nanoid format instead of cuid
  * @param id - The string to validate
@@ -50,6 +62,16 @@ export function isValidCuid(id: string): boolean {
 export function isValidSlug(slug: string): boolean {
   // Must be exactly 6 characters, lowercase alphanumeric only
   return /^[a-z0-9]{6}$/.test(slug);
+}
+
+/**
+ * Validate if a string is a valid API key
+ * @param apiKey - The string to validate
+ * @returns boolean - True if valid API key format (32 hex characters)
+ */
+export function isValidApiKey(apiKey: string): boolean {
+  // Must be exactly 32 characters, hex only
+  return /^[a-f0-9]{32}$/.test(apiKey);
 }
 
 /**

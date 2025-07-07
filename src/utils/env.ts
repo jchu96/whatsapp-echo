@@ -78,6 +78,8 @@ export function getEnvConfig(): EnvConfig {
     MAX_FILE_SIZE_MB: process.env.MAX_FILE_SIZE_MB,
     DOWNLOAD_TIMEOUT_SEC: process.env.DOWNLOAD_TIMEOUT_SEC,
     PROCESSING_TIMEOUT_SEC: process.env.PROCESSING_TIMEOUT_SEC,
+    // iOS Shortcut integration
+    NEXT_PUBLIC_IOS_SHORTCUT: process.env.NEXT_PUBLIC_IOS_SHORTCUT,
     // Company information
     PRIVACY_EMAIL: process.env.PRIVACY_EMAIL,
     EMAIL_SITE_CONTACT: process.env.EMAIL_SITE_CONTACT,
@@ -248,4 +250,12 @@ export function getRecaptchaConfig() {
  */
 export function getRecaptchaSiteKey(): string | undefined {
   return process.env.RECAPTCHA_SITE_KEY;
+}
+
+/**
+ * Get iOS Shortcut URL
+ * @returns iOS Shortcut download URL
+ */
+export function getIosShortcutUrl(): string {
+  return process.env.NEXT_PUBLIC_IOS_SHORTCUT || 'https://www.icloud.com/shortcuts/placeholder';
 } 

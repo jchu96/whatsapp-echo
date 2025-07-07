@@ -11,8 +11,8 @@ import {
   UserEnhancementPreferences,
   EnhancementType
 } from '@/types';
-import { generateUserId, generateVoiceEventId, generateEmailSlug } from '@/utils/id';
-import { getEnvConfig } from '@/utils/env';
+import { generateUserId, generateVoiceEventId, generateEmailSlug, generateApiKey } from '@/utils/id';
+import { getEnvConfig, isDevelopment } from '@/utils/env';
 
 // Database configuration
 const config = getEnvConfig();
@@ -183,6 +183,44 @@ export async function getUserByEmail(email: string): Promise<DbResponse<User>> {
 }
 
 /**
+ * Get user by API key
+ * @param apiKey - User API key
+ * @returns Promise<DbResponse<User>> - User data or error
+ */
+export async function getUserByApiKey(apiKey: string): Promise<DbResponse<User>> {
+  try {
+    console.log('🔍 [AUTH] Getting user by API key');
+    
+    const result = await executeQuery<User>(
+      'SELECT * FROM users WHERE api_key = ? LIMIT 1',
+      [apiKey]
+    );
+
+    console.log('🔍 [AUTH] getUserByApiKey result:', result.success);
+
+    if (!result.success) {
+      console.error('🚨 [AUTH] getUserByApiKey failed:', result.error);
+      return { success: false, error: result.error };
+    }
+
+    const user = result.results?.[0];
+    if (!user) {
+      console.log('ℹ️ [AUTH] User not found for API key');
+      return { success: false, error: 'User not found' };
+    }
+
+    console.log('✅ [AUTH] User found by API key:', user.google_email);
+    return { success: true, data: user };
+  } catch (error) {
+    console.error('🚨 [AUTH] getUserByApiKey error:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to get user' 
+    };
+  }
+}
+
+/**
  * Create a new user
  * @param userData - User creation data
  * @returns Promise<DbResponse<User>> - Created user data or error
@@ -193,13 +231,14 @@ export async function createUser(userData: CreateUserData): Promise<DbResponse<U
     
     const id = generateUserId();
     const slug = userData.slug || generateEmailSlug();
+    const apiKey = generateApiKey();
     const approved = userData.approved ? 1 : 0;
 
-    console.log('🔍 [AUTH] User creation details:', { id, slug, approved });
+    console.log('🔍 [AUTH] User creation details:', { id, slug, approved, hasApiKey: !!apiKey });
 
     const result = await executeQuery(
-      'INSERT INTO users (id, google_email, slug, approved) VALUES (?, ?, ?, ?)',
-      [id, userData.google_email, slug, approved]
+      'INSERT INTO users (id, google_email, slug, api_key, approved) VALUES (?, ?, ?, ?, ?)',
+      [id, userData.google_email, slug, apiKey, approved]
     );
 
     console.log('🔍 [AUTH] createUser result:', result);
@@ -214,11 +253,12 @@ export async function createUser(userData: CreateUserData): Promise<DbResponse<U
       id,
       google_email: userData.google_email,
       slug,
+      api_key: apiKey,
       approved,
       created_at: new Date().toISOString(),
     };
 
-    console.log('✅ [AUTH] User created successfully:', user);
+    console.log('✅ [AUTH] User created successfully with API key:', user.google_email);
     return { success: true, data: user };
   } catch (error) {
     console.error('🚨 [AUTH] createUser error:', error);
@@ -893,5 +933,70 @@ export function deserializeEnhancements(enhancementsJson: string | null): Enhanc
   } catch (error) {
     console.error('🚨 [DB] Error parsing enhancements JSON:', error);
     return [];
+  }
+}
+
+/**
+ * Backfill API keys for existing users who don't have them
+ * @returns Promise<DbResponse<number>> - Number of users updated
+ */
+export async function backfillApiKeys(): Promise<DbResponse<number>> {
+  try {
+    console.log('🔧 [MIGRATION] Starting API key backfill for existing users');
+    
+    // Get users without API keys
+    const usersResult = await executeQuery<User>(
+      'SELECT * FROM users WHERE api_key IS NULL'
+    );
+
+    if (!usersResult.success) {
+      return { success: false, error: usersResult.error };
+    }
+
+    const usersWithoutKeys = usersResult.results || [];
+    console.log(`🔧 [MIGRATION] Found ${usersWithoutKeys.length} users without API keys`);
+
+    if (usersWithoutKeys.length === 0) {
+      console.log('✅ [MIGRATION] All users already have API keys');
+      return { success: true, data: 0 };
+    }
+
+    let updatedCount = 0;
+
+    // Update each user with a unique API key
+    for (const user of usersWithoutKeys) {
+      let apiKey: string;
+      let attempts = 0;
+      const maxAttempts = 5;
+
+      // Generate unique API key with retry logic
+      do {
+        apiKey = generateApiKey();
+        attempts++;
+
+        const updateResult = await executeQuery(
+          'UPDATE users SET api_key = ? WHERE id = ? AND api_key IS NULL',
+          [apiKey, user.id]
+        );
+
+        if (updateResult.success && updateResult.meta?.changes) {
+          console.log(`✅ [MIGRATION] Generated API key for user: ${user.google_email}`);
+          updatedCount++;
+          break;
+        } else if (attempts >= maxAttempts) {
+          console.error(`❌ [MIGRATION] Failed to generate unique API key for user: ${user.google_email}`);
+          break;
+        }
+      } while (attempts < maxAttempts);
+    }
+
+    console.log(`✅ [MIGRATION] Backfill completed: ${updatedCount}/${usersWithoutKeys.length} users updated`);
+    return { success: true, data: updatedCount };
+  } catch (error) {
+    console.error('🚨 [MIGRATION] API key backfill error:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to backfill API keys' 
+    };
   }
 } 

@@ -4,6 +4,7 @@ export interface User {
   google_email: string;
   slug: string;
   approved: number; // 0 = pending, 1 = approved
+  api_key: string; // Permanent API key for iOS Shortcut integration
   created_at: string;
 }
 
@@ -14,7 +15,7 @@ export interface VoiceEvent {
   duration_sec: number | null;
   bytes: number | null;
   status: 'processing' | 'completed' | 'failed';
-  processing_type: 'raw' | 'cleanup' | 'summary' | null;
+  processing_type: 'raw' | 'cleanup' | 'summary' | 'api' | null;
   completed_at: string | null;
   error_message: string | null;
   enhancements_requested: string | null; // JSON array of enhancement types
@@ -76,7 +77,7 @@ export interface CreateVoiceEventData {
   duration_sec?: number;
   bytes?: number;
   status?: 'processing' | 'completed' | 'failed';
-  processing_type?: 'raw' | 'cleanup' | 'summary';
+  processing_type?: 'raw' | 'cleanup' | 'summary' | 'api';
   enhancements_requested?: string; // JSON array of enhancement types
 }
 
@@ -114,6 +115,8 @@ export interface EnvConfig {
   MAX_FILE_SIZE_MB?: string;
   DOWNLOAD_TIMEOUT_SEC?: string;
   PROCESSING_TIMEOUT_SEC?: string;
+  // iOS Shortcut integration
+  NEXT_PUBLIC_IOS_SHORTCUT?: string;
   // Company information
   PRIVACY_EMAIL?: string;
   EMAIL_SITE_CONTACT?: string;

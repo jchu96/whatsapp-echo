@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import Link from 'next/link';
-import { markdownToHtml } from '@/lib/markdown';
+import { markdownToHtmlWeb } from '@/lib/markdown';
 
 export default function TermsOfServicePage() {
   const [content, setContent] = useState<string>('');
@@ -44,8 +44,8 @@ export default function TermsOfServicePage() {
         markdown = markdown.replace(/\{\{COMPANY_NAME\}\}/g, config.company.name);
         markdown = markdown.replace(/\{\{COMPANY_FULL_ADDRESS\}\}/g, config.company.fullAddress);
         
-        // Convert markdown to HTML
-        const html = markdownToHtml(markdown);
+        // Convert markdown to HTML for web display
+        const html = markdownToHtmlWeb(markdown);
         setContent(html);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load content');

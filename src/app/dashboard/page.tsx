@@ -1,6 +1,6 @@
 import { getServerSession } from 'next-auth';
 import { authOptions, getSessionUser } from '@/lib/auth';
-import { getVoiceEventsByUser } from '@/lib/database';
+import { getVoiceEventsByUser, getUserByEmail } from '@/lib/database';
 import { redirect } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { formatDate, formatBytes, formatDuration } from '@/lib/utils';
 import { getMailgunConfig } from '@/utils/env';
 import { SignOutButton } from '@/components/auth/signout-button';
+import { ApiKeyCard } from '@/components/dashboard/api-key-card';
 import Link from 'next/link';
 
 interface DashboardPageProps {
@@ -24,25 +25,30 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     redirect('/auth/signin');
   }
 
-  const user = getSessionUser(session);
-  if (!user) {
+  const sessionUser = getSessionUser(session);
+  if (!sessionUser) {
     redirect('/auth/signin');
   }
+
+  // Fetch full user data from database to get API key
+  const userResult = await getUserByEmail(sessionUser.email);
+  if (!userResult.success || !userResult.data) {
+    redirect('/auth/signin');
+  }
+
+  const user = userResult.data;
 
   // Parse pagination parameters
   const currentPage = parseInt(searchParams.page || '1');
   const itemsPerPage = 10;
 
   // Fetch user's voice events with pagination
-  const eventsResult = await getVoiceEventsByUser(user!.id, currentPage, itemsPerPage);
+  const eventsResult = await getVoiceEventsByUser(user.id, currentPage, itemsPerPage);
   const events = eventsResult.success ? eventsResult.data : [];
   const pagination = eventsResult.pagination || { page: 1, limit: 10, total: 0, totalPages: 0 };
   
   const config = getMailgunConfig();
-  const userEmailAlias = `${user!.slug}@${config.domain}`;
-  
-  // For TypeScript null safety
-  const safeUser = user;
+  const userEmailAlias = `${user.slug}@${config.domain}`;
 
   // Helper function to get status badge variant
   const getStatusBadgeVariant = (status: string) => {
@@ -65,7 +71,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         <div>
           <h1 className="text-3xl font-bold">Dashboard</h1>
           <p className="text-muted-foreground">
-            Welcome back, {safeUser!.email}
+            Welcome back, {user.google_email}
           </p>
         </div>
         <div className="flex items-center space-x-4">
@@ -77,6 +83,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           <SignOutButton />
         </div>
       </div>
+      
 
       {/* Status, Email Alias, and Account Management */}
       <div className="grid gap-4 md:grid-cols-3">
@@ -88,10 +95,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              <Badge variant={Boolean(safeUser!.approved) ? "default" : "secondary"}>
-                {Boolean(safeUser!.approved) ? "Approved" : "Pending Approval"}
+              <Badge variant={Boolean(user.approved) ? "default" : "secondary"}>
+                {Boolean(user.approved) ? "Approved" : "Pending Approval"}
               </Badge>
-              {!Boolean(safeUser!.approved) && (
+              {!Boolean(user.approved) && (
                 <p className="text-sm text-muted-foreground">
                   Your account is pending approval. You'll receive an email when approved.
                 </p>
@@ -139,6 +146,13 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           </CardContent>
         </Card>
       </div>
+
+      {/* iOS Shortcut API Key - NEW: Added before status cards */}
+      <ApiKeyCard 
+        apiKey={user.api_key} 
+        isAdmin={sessionUser.isAdmin}
+        userEmail={sessionUser.isAdmin ? user.google_email : undefined}
+      />
 
       {/* Enhancement Options */}
       <Card>

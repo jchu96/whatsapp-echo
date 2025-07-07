@@ -1,10 +1,25 @@
 # WhatsApp Echo - Voice Note Transcription Service Architecture
 
-**Revision Date:** July 5, 2025  
-**Version:** 1.0.2  
-**Status:** Production Ready with Background Processing
+**Revision Date:** July 7, 2025  
+**Version:** 1.03  
+**Status:** Production Ready with iOS Shortcut API Integration
 
 ---
+
+## 🔄 1.03 Update: iOS Shortcut API Integration
+
+**Release Date:** July 7, 2025
+
+- **iOS Shortcut API Integration**: Added permanent API keys for every user enabling seamless iOS Shortcut integration for direct voice transcription
+- **Programmatic API Endpoint**: New `/api/transcribe` endpoint with Bearer token authentication providing JSON responses for developers
+- **API Key Management System**: Secure 32-character hex API keys with automatic generation, database storage, and dashboard management
+- **Enhanced User Dashboard**: Added API key card component with copy/reveal functionality and iOS shortcut download button
+- **Database Schema Enhancement**: Added `api_key` column to users table with unique constraint and automatic backfill for existing users
+- **Authentication Layer**: New `auth-api-key.ts` module providing Bearer token validation and rate limiting integration
+- **Middleware Updates**: Updated route protection to allow `/api/transcribe` endpoint with its own authentication system
+- **Rate Limiting Integration**: API endpoints leverage existing webhook rate limiting system (5 requests/minute per user)
+- **Privacy-First API Design**: Same zero-logging policy as email processing with JSON-only responses and no email side effects
+- **Developer Experience**: Complete API documentation with curl examples, error handling, and usage instructions
 
 ## 🔄 1.0.2 Update: Documentation Enhancement & Verification
 
@@ -32,39 +47,45 @@
 
 ## High-Level Overview
 
-WhatsApp Echo is a production-ready voice note transcription service built with Next.js 14 that enables users to send audio files via email and receive AI-generated transcriptions with optional enhancements. The system uses a hybrid architecture combining Vercel's serverless platform for the web application with Cloudflare D1 for database services, OpenAI Whisper for transcription, and Mailgun for email processing. It features an innovative "Always Raw + Optional Enhancements" processing system with **background processing capabilities**, user preference management, comprehensive admin management, user approval workflows, and robust security measures optimized for the Vercel Hobby tier.
+WhatsApp Echo is a production-ready voice note transcription service built with Next.js 14 that enables users to send audio files via email and receive AI-generated transcriptions with optional enhancements. The system uses a hybrid architecture combining Vercel's serverless platform for the web application with Cloudflare D1 for database services, OpenAI Whisper for transcription, and Mailgun for email processing. It features an innovative "Always Raw + Optional Enhancements" processing system with **background processing capabilities**, **iOS Shortcut API integration**, user preference management, comprehensive admin management, user approval workflows, and robust security measures optimized for the Vercel Hobby tier.
 
-**Privacy-First Design**: The architecture prioritizes user privacy with zero transcript content logging, in-memory-only audio processing, and no persistent storage of voice data. All transcript content is delivered directly via email without being stored on servers, ensuring maximum privacy protection for sensitive voice communications.
+**iOS Shortcut Integration**: The system now provides permanent API keys for every user, enabling seamless iOS Shortcut integration for direct voice transcription. Users can record voice notes anywhere on their iPhone and receive instant JSON transcriptions without opening any app, using the secure `/api/transcribe` endpoint with Bearer token authentication.
 
-**Background Processing Architecture**: The system now implements a secure background processing system that separates raw transcription (immediate delivery) from enhancement processing (background execution), preventing serverless function timeouts while maintaining the "always raw" guarantee.
+**Privacy-First Design**: The architecture prioritizes user privacy with zero transcript content logging, in-memory-only audio processing, and no persistent storage of voice data. All transcript content is delivered directly via email or JSON response without being stored on servers, ensuring maximum privacy protection for sensitive voice communications.
+
+**Background Processing Architecture**: The system implements a secure background processing system that separates raw transcription (immediate delivery) from enhancement processing (background execution), preventing serverless function timeouts while maintaining the "always raw" guarantee.
 
 ## Component Inventory
 
 ### Frontend Components
 - **Next.js 14 App Router Application** - React-based web interface with SSR
 - **Admin Dashboard** - User management interface with statistics and bulk operations
-- **User Dashboard** - Personal voice note history and usage instructions
+- **User Dashboard** - Personal voice note history and usage instructions with API key management
+- **API Key Management Card** - React component for displaying, copying, and managing user API keys
 - **User Preferences Page** - Interactive interface for managing enhancement preferences
 - **Authentication Pages** - Google OAuth sign-in and error handling
 - **UI Component Library** - shadcn/ui components with Tailwind CSS styling
 
 ### Backend Services
 - **API Routes** - Next.js API routes for webhooks, admin operations, preferences, and auth
+- **iOS Shortcut API Endpoint** - `/api/transcribe` endpoint with Bearer token authentication for programmatic access
+- **API Key Authentication Service** - Bearer token validation and rate limiting for iOS Shortcut integration
 - **User Preferences API** - RESTful endpoints for managing enhancement preferences
 - **Smart Webhook Handler** - Processes inbound emails with always-raw + optional enhancements
 - **Background Enhancement API** - Secure background processing for GPT-4.1 nano enhancements
 - **Authentication Service** - NextAuth.js with Google OAuth integration
-- **Database Layer** - Cloudflare D1 operations via REST API with preference management
+- **Database Layer** - Cloudflare D1 operations via REST API with preference management and API key storage
 - **OpenAI Integration** - Whisper transcription + GPT-4.1 nano enhancement services
 - **Multi-Email Service** - Mailgun SDK for sending raw transcripts and enhanced versions
 - **Enhanced Error Handling** - `src/lib/enhanced-errors.ts` provides comprehensive error handling with Sentry integration, user notification, and metrics logging for production reliability
 - **Markdown Utility** - `src/lib/markdown.ts` provides secure, reusable markdown-to-HTML conversion for all enhancement emails, leveraging Showdown for robust formatting.
 
 ### Security & Middleware
-- **Route Protection Middleware** - Authentication and authorization enforcement
-- **Rate Limiting System** - In-memory rate limiting with configurable windows
+- **Route Protection Middleware** - Authentication and authorization enforcement with API endpoint bypass
+- **API Key Authentication** - `src/lib/auth-api-key.ts` provides Bearer token validation for iOS Shortcut API
+- **Rate Limiting System** - In-memory rate limiting with configurable windows for both webhook and API access
 - **Security Headers** - CSRF protection, XSS prevention, and content security
-- **Input Validation** - File type, size, and format validation
+- **Input Validation** - File type, size, and format validation for both email and API uploads
 - **Error Handling** - Comprehensive error categorization and user feedback
 - **Background API Security** - Token-based authentication for background processing
 - **reCAPTCHA Integration** - v2 protection for contact forms against automated abuse
@@ -269,11 +290,12 @@ sequenceDiagram
 
 ### Database Schema
 ```sql
--- Users table with approval workflow
+-- Users table with approval workflow and API key support
 CREATE TABLE users (
   id           TEXT PRIMARY KEY,          -- cuid() identifier  
   google_email TEXT UNIQUE NOT NULL,     -- Google OAuth email
   slug         TEXT UNIQUE NOT NULL,      -- 6-char email alias
+  api_key      TEXT UNIQUE NOT NULL,      -- 32-char hex API key for iOS Shortcut integration
   approved     INTEGER NOT NULL DEFAULT 0, -- 0=pending, 1=approved
   created_at   DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -297,7 +319,7 @@ CREATE TABLE voice_events (
   duration_sec         INTEGER,                   -- Audio duration
   bytes                INTEGER,                   -- File size
   status               TEXT DEFAULT 'pending',    -- 'pending', 'processing', 'completed', 'failed'
-  processing_type      TEXT DEFAULT 'raw',        -- 'raw', 'cleanup', 'summary'
+  processing_type      TEXT DEFAULT 'raw',        -- 'raw', 'cleanup', 'summary', 'api'
   completed_at         DATETIME,                  -- When processing completed
   error_message        TEXT,                      -- Error details if failed
   enhancements_requested TEXT,                    -- JSON array of requested enhancements
@@ -311,6 +333,8 @@ CREATE TABLE voice_events (
 |-----------|-------------------|------------------------|
 | **Frontend** | TypeScript, React 18, Next.js 14 | Vercel Edge, Tailwind CSS |
 | **Backend API** | TypeScript, Next.js API Routes | Vercel Serverless Functions |
+| **iOS Shortcut API** | TypeScript, Next.js API Routes | Bearer token auth, multipart/form-data |
+| **API Key Authentication** | TypeScript, Custom validation | 32-char hex keys, rate limiting |
 | **Background Processing** | TypeScript, Next.js API Routes | Separate Vercel Functions |
 | **Database** | SQL, SQLite | Cloudflare D1 via REST API |
 | **Authentication** | NextAuth.js v4 | Google OAuth 2.0 |
