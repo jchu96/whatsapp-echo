@@ -1,13 +1,9 @@
 # Terms of Service - Echo Scribe
 
-<div align="center">
-
-**Effective Date:** January 6, 2025  
-**Last Updated:** January 6, 2025
+**Effective Date:** July 4, 2025  
+**Last Updated:** July 5, 2025
 
 ---
-
-</div>
 
 ## 📋 1. Agreement to Terms
 

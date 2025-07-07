@@ -1,13 +1,7 @@
 # Privacy Policy - Echo Scribe
 
-<div align="center">
-
 **Effective Date:** July 4, 2025  
 **Last Updated:** July 5, 2025
-
----
-
-</div>
 
 ## 🔒 1. Introduction
 

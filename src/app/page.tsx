@@ -12,9 +12,9 @@ export default async function HomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Friends & Family Banner */}
-      <div className="bg-blue-50 border-b border-blue-200 px-4 py-2">
+      <div className="bg-blue-50/80 border-b border-blue-200/50 px-4 py-2">
         <div className="max-w-4xl mx-auto text-center">
-          <p className="text-sm text-blue-700">
+          <p className="text-xs text-blue-700">
             <span className="mr-1">👋</span>
             <span className="hidden sm:inline">Personal project for friends & family — interested in trying it? Just reach out to Jeremy!</span>
             <span className="sm:hidden">Personal project for friends & family — reach out to Jeremy!</span>
@@ -23,37 +23,56 @@ export default async function HomePage() {
       </div>
 
       {/* Navigation Header */}
-      <header className="absolute top-12 right-0 z-20 p-4">
-        <div className="flex items-center space-x-4">
-          {session ? (
-            <Button asChild variant="ghost">
-              <Link href="/dashboard">Dashboard</Link>
-            </Button>
-          ) : (
-            <Button asChild>
-              <Link href="/auth/signin">Sign In</Link>
-            </Button>
-          )}
+      <nav className="w-full bg-white/80 backdrop-blur-sm border-b border-gray-200/50 sticky top-0 z-30">
+        <div className="container mx-auto px-4 py-3">
+          <div className="flex items-center justify-between">
+            {/* Logo */}
+            <Link href="/" className="flex items-center space-x-2 group">
+              <div className="relative w-20 h-12 transform group-hover:scale-105 transition-transform duration-200">
+                <Image
+                  src="/images/logo.png"
+                  alt="Echo Scribe Logo"
+                  fill
+                  className="object-contain"
+                  priority
+                />
+              </div>
+            </Link>
+
+            {/* Navigation Links */}
+            <div className="flex items-center space-x-4">
+              <a
+                href="https://github.com/jchu96/whatsapp-echo"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors duration-200 group"
+              >
+                <div className="relative w-5 h-5 transform group-hover:scale-110 transition-transform duration-200">
+                  <Image
+                    src="/images/github.png"
+                    alt="GitHub"
+                    fill
+                    className="object-contain"
+                  />
+                </div>
+              </a>
+              
+              {session ? (
+                <Button asChild variant="ghost" size="sm">
+                  <Link href="/dashboard">Dashboard</Link>
+                </Button>
+              ) : (
+                <Button asChild size="sm">
+                  <Link href="/auth/signin">Sign In</Link>
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
-      </header>
+      </nav>
 
       {/* Hero Section with Immediate CTA */}
       <div className="container mx-auto px-4 py-16 relative">
-        {/* Logo */}
-        <div className="absolute top-0 left-4 md:left-8 z-10">
-          <Link href="/" className="flex items-center space-x-2 group">
-            <div className="relative w-24 h-14 md:w-32 md:h-20 transform group-hover:scale-105 transition-transform duration-200">
-              <Image
-                src="/images/logo.png"
-                alt="Echo Scribe Logo"
-                fill
-                className="object-contain"
-                priority
-              />
-            </div>
-          </Link>
-        </div>
-
         {/* Decorative elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute -top-4 -right-4 w-72 h-72 bg-purple-200 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
@@ -69,7 +88,7 @@ export default async function HomePage() {
             Echo Scribe
           </h1>
           <p className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto leading-relaxed italic animate-fade-in-up mb-8">
-            Free your voice notes—fast, private, copy-ready text.
+            Free your voice notes—fast, private, copy-ready text powered by OpenAI Whisper.
           </p>
 
           {/* Immediate CTA */}
@@ -106,47 +125,65 @@ export default async function HomePage() {
           </div>
         </div>
 
-        {/* Flicker Ventures Section - Moved up */}
+        {/* Three Unified Badges Section */}
         <div className="mb-16">
-          <div className="flex flex-col items-center justify-center space-y-4">
-            <div className="relative w-32 h-12">
-              <Image
-                src="/images/flickerventures.png"
-                alt="Flicker Ventures"
-                fill
-                className="object-contain"
-              />
-            </div>
-            <p className="text-sm text-gray-600">
-              Built with ❤️ by Flicker Ventures
-            </p>
-          </div>
-        </div>
-
-        {/* GitHub Section */}
-        <div className="mb-16">
-          <div className="flex flex-col items-center justify-center space-y-4">
-            <div className="flex items-center space-x-3 group">
-              <div className="relative w-8 h-8 transform group-hover:scale-110 transition-transform duration-200">
-                <Image
-                  src="/images/github.png"
-                  alt="GitHub"
-                  fill
-                  className="object-contain"
-                />
+          <div className="max-w-4xl mx-auto">
+            <div className="grid md:grid-cols-3 gap-6">
+              {/* Flicker Ventures Badge */}
+              <div className="flex flex-col items-center justify-center space-y-3 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200 p-6">
+                <div className="relative w-28 h-10">
+                  <Image
+                    src="/images/flickerventures.png"
+                    alt="Flicker Ventures"
+                    fill
+                    className="object-contain"
+                  />
+                </div>
+                <div className="text-center">
+                  <div className="text-sm font-semibold text-gray-900">Built with ❤️</div>
+                  <div className="text-xs text-gray-600">by Flicker Ventures</div>
+                </div>
               </div>
-              <a
-                href="https://github.com/jchu96/whatsapp-echo"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-gray-600 hover:text-gray-800 transition-colors duration-200 hover:underline"
-              >
-                Open Source on GitHub
-              </a>
+
+              {/* OpenAI Whisper Badge */}
+              <div className="flex flex-col items-center justify-center space-y-3 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200 p-6">
+                <div className="relative w-20 h-5">
+                  <Image
+                    src="/images/OpenAI_Logo.svg"
+                    alt="OpenAI"
+                    fill
+                    className="object-contain"
+                  />
+                </div>
+                <div className="text-center">
+                  <div className="text-sm font-semibold text-gray-900">Powered by Whisper-1</div>
+                  <div className="text-xs text-gray-600">99%+ accuracy</div>
+                </div>
+              </div>
+
+              {/* GitHub Open Source Badge */}
+              <div className="flex flex-col items-center justify-center space-y-3 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200 p-6">
+                <a
+                  href="https://github.com/jchu96/whatsapp-echo"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex flex-col items-center space-y-3 group w-full"
+                >
+                  <div className="relative w-7 h-7 transform group-hover:scale-110 transition-transform duration-200">
+                    <Image
+                      src="/images/github.png"
+                      alt="GitHub"
+                      fill
+                      className="object-contain"
+                    />
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm font-semibold text-gray-900 group-hover:text-gray-700">Open Source</div>
+                    <div className="text-xs text-gray-600">View on GitHub</div>
+                  </div>
+                </a>
+              </div>
             </div>
-            <p className="text-xs text-gray-500 text-center">
-              This project is open source and available on GitHub
-            </p>
           </div>
         </div>
 
@@ -156,7 +193,7 @@ export default async function HomePage() {
             <h2 className="text-3xl font-bold mb-6 text-gray-900">Overview</h2>
             <p className="text-lg text-gray-700 leading-relaxed mb-8">
               WhatsApp's built-in transcripts stay locked inside the app—you can't copy or paste them. 
-              This service fixes that: email your voice note and get a fully copy-pastable transcript back in moments.
+              This service fixes that: email your voice note or use our iOS Shortcut and get a fully copy-pastable transcript back in moments using OpenAI's industry-leading Whisper-1 model.
             </p>
             
             <div className="grid md:grid-cols-2 gap-8">
@@ -167,8 +204,8 @@ export default async function HomePage() {
                     <span className="text-green-600 font-bold">✓</span>
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-2">Always Raw + Optional AI Enhancements</h3>
-                    <p className="text-gray-600 text-sm">Get your raw transcript first (15-30 seconds), then choose from AI-powered cleanup, summaries, or both. Each version arrives as a separate email.</p>
+                    <h3 className="font-semibold text-gray-900 mb-2">Always Instant + Optional AI Enhancements</h3>
+                    <p className="text-gray-600 text-sm">Get your instant transcript first (15-30 seconds), then choose from AI-powered cleanup, summaries, or both. Works via email or iOS Shortcut.</p>
                   </div>
                 </div>
                 
@@ -178,7 +215,7 @@ export default async function HomePage() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-2">Copy-paste—and AI-ready—transcripts</h3>
-                    <p className="text-gray-600 text-sm">Raw transcripts are instantly usable. Enhanced versions include cleaned formatting, grammar fixes, and intelligent summaries—all ready for documents or AI tools.</p>
+                    <p className="text-gray-600 text-sm">Instant transcripts are immediately usable. Enhanced versions include cleaned formatting, grammar fixes, and intelligent summaries—all ready for documents or AI tools.</p>
                   </div>
                 </div>
                 
@@ -200,7 +237,7 @@ export default async function HomePage() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-2">No extra apps or tech know-how</h3>
-                    <p className="text-gray-600 text-sm">Just send an email—no uploads, settings, or log-ins required. Configure your enhancement preferences once in the dashboard.</p>
+                    <p className="text-gray-600 text-sm">Just send an email or use the iOS Shortcut—no uploads, settings, or complex setup required. Configure your enhancement preferences once in the dashboard.</p>
                   </div>
                 </div>
                 
@@ -210,7 +247,7 @@ export default async function HomePage() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-2">Fast & Reliable Processing</h3>
-                    <p className="text-gray-600 text-sm">Raw transcripts arrive in 15-30 seconds. Enhanced versions follow in background processing, ensuring you never wait for basic transcription.</p>
+                    <p className="text-gray-600 text-sm">Instant transcripts arrive in 15-30 seconds. Enhanced versions follow in background processing, ensuring you never wait for basic transcription.</p>
                   </div>
                 </div>
                 
@@ -239,7 +276,7 @@ export default async function HomePage() {
               </div>
               <h2 className="text-3xl font-bold mb-4 text-gray-900">AI-Powered Enhancement Options</h2>
               <p className="text-lg text-gray-700 leading-relaxed max-w-2xl mx-auto">
-                Always get your raw transcript first, then choose which AI enhancements you want. Each version arrives as a separate, clearly labeled email.
+                Always get your instant OpenAI Whisper transcript first, then choose which AI enhancements you want. Use email or iOS Shortcut—each version is delivered clearly labeled.
               </p>
             </div>
             
@@ -248,10 +285,10 @@ export default async function HomePage() {
                 <div className="inline-flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mb-4">
                   <span className="text-green-600 font-bold text-xl">📝</span>
                 </div>
-                <h3 className="font-bold text-lg mb-3 text-gray-900">Raw Transcript</h3>
-                <p className="text-gray-600 text-sm mb-3">Always delivered first in 15-30 seconds</p>
+                <h3 className="font-bold text-lg mb-3 text-gray-900">Instant Transcript</h3>
+                <p className="text-gray-600 text-sm mb-3">OpenAI Whisper-1 transcription in 15-30 seconds</p>
                 <div className="text-xs text-gray-500 space-y-1">
-                  <div>• Exactly as spoken</div>
+                  <div>• Industry-leading accuracy</div>
                   <div>• Basic punctuation</div>
                   <div>• Immediate delivery</div>
                   <div>• No waiting</div>
@@ -293,11 +330,11 @@ export default async function HomePage() {
                 <div className="group">
                   <div className="text-2xl mb-2 group-hover:scale-110 transition-transform duration-200">📧</div>
                   <div className="text-sm font-semibold mb-1">Send Voice Note</div>
-                  <div className="text-xs text-gray-600">Email your audio file</div>
+                  <div className="text-xs text-gray-600">OpenAI Whisper processing</div>
                 </div>
                 <div className="group">
                   <div className="text-2xl mb-2 group-hover:scale-110 transition-transform duration-200">⚡</div>
-                  <div className="text-sm font-semibold mb-1">Get Raw (15-30s)</div>
+                  <div className="text-sm font-semibold mb-1">Get Instant (15-30s)</div>
                   <div className="text-xs text-gray-600">Immediate transcript</div>
                 </div>
                 <div className="group">
