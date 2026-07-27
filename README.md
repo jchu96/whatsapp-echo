@@ -35,6 +35,11 @@
 
 Tired of listening to long voice messages? This service converts your WhatsApp voice notes (or any audio) into readable text almost instantly. Just email the audio file, and get the words back in under a minute—no apps, no uploads, no fuss.
 
+## Acknowledgments
+
+Product ideation: [Nina Patrick (@ninapatrick)](https://github.com/ninapatrick)
+helped shape the early concept and direction of WhatsApp Echo.
+
 ## 🚀 What It Does
 
 **It's ridiculously simple:** Send voice note ➜ Get multiple versions back.
