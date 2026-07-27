@@ -109,10 +109,7 @@ curl -X POST \
 { "text": "Your transcribed voice note content here..." }
 ```
 
-The dashboard includes a one-click iOS Shortcut download with visual setup instructions — paste your API key once and transcribe from anywhere on your iPhone.
-
-> [!TIP]
-> The iOS Shortcut concept was inspired by [Giacomo Melzi's implementation](https://giacomomelzi.com/transcribe-audio-messages-iphone-ai). Echo Scribe's version acts as a managed proxy, so users never need their own OpenAI account or billing.
+The dashboard includes a one-click iOS Shortcut download with visual setup instructions — paste your API key once and transcribe from anywhere on your iPhone (see [Credit & Inspiration](#credit--inspiration) for the original concept).
 
 ## Run your own
 
@@ -166,7 +163,7 @@ Security measures include Google OAuth + JWT sessions, per-user rate limiting, C
 | [Security Policy](SECURITY.md) | Security measures, privacy guarantees, vulnerability reporting |
 | [Changelog](CHANGELOG.md) | Version history |
 
-## Acknowledgments
+## Credit & Inspiration
 
 - **[Nina Patrick (@ninapatrick)](https://github.com/ninapatrick)** — product ideation; helped shape the early concept and direction of Echo Scribe
-- **[Giacomo Melzi](https://linkedin.com/in/giacomomelzi)** — original iOS Shortcut concept that inspired the API integration
+- **[Giacomo Melzi](https://linkedin.com/in/giacomomelzi)** — original [iOS Shortcut concept](https://giacomomelzi.com/transcribe-audio-messages-iphone-ai) that inspired the API integration; Echo Scribe's version acts as a managed proxy so users never need their own OpenAI account
