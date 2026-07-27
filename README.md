@@ -44,21 +44,9 @@ sequenceDiagram
 
 The raw transcript is **always delivered first** — enhancements never make you wait. Each version arrives as a separate, clearly labeled email (`[Raw]`, `[Cleaned]`, `[Summary]`).
 
-## By the numbers
+## Proven in production
 
-Echo Scribe has been quietly doing its job in production since July 2025:
-
-| Metric | Value |
-| --- | --- |
-| In production since | July 4, 2025 |
-| Voice notes processed | 211 (187 completed) |
-| Audio processed | ~3.7 hours (219 minutes, 204 MB) |
-| Registered users | 30 (17 approved) |
-| Active every month since launch | 12 of the last 13 months |
-| Last production redeploy | July 2025 — running untouched for 12+ months |
-
-> [!NOTE]
-> Numbers pulled live from the production database and Vercel on July 27, 2026. The service runs almost entirely on free tiers — the only meaningful cost is OpenAI usage (~$0.006/minute of audio).
+Echo Scribe has been running continuously since **July 2025** and in steady use ever since — hundreds of voice notes and hours of audio transcribed. The production deployment has run for over a year without needing a redeploy, and it costs almost nothing to operate: everything runs on free tiers except OpenAI usage (~$0.006 per minute of audio).
 
 ## Features
 
