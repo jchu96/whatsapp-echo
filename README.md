@@ -51,7 +51,7 @@ Echo Scribe has been quietly doing its job in production since July 2025:
 | Metric | Value |
 | --- | --- |
 | In production since | July 4, 2025 |
-| Voice notes transcribed | 211 |
+| Voice notes processed | 211 (187 completed) |
 | Audio processed | ~3.7 hours (219 minutes, 204 MB) |
 | Registered users | 30 (17 approved) |
 | Active every month since launch | 12 of the last 13 months |
@@ -67,7 +67,7 @@ Echo Scribe has been quietly doing its job in production since July 2025:
 - **Privacy-first** — audio is processed entirely in memory, transcripts are never stored or logged, only metadata is kept
 - **User management** — Google sign-in, admin approval workflow, per-user preferences and voice history dashboards
 - **Production hardening** — rate limiting, CSRF protection, security headers, Sentry monitoring (content-free), reCAPTCHA on the contact form
-- **Wide format support** — M4A, MP3, WAV, and OGG files up to 15 MB / ~25 minutes
+- **Wide format support** — M4A, MP3, WAV, OGG, AAC, and FLAC files up to 15 MB / ~25 minutes
 
 ## Architecture
 
